@@ -1,5 +1,10 @@
 packages:
   - "packages/*"
 
+# Dependencies allowed (or not) to run install scripts.
 allowBuilds:
   esbuild: true
+  # vsce's signing helper, used when publishing the VS Code extension.
+  "@vscode/vsce-sign": true
+  # Optional native keychain support for vsce; it works without it.
+  keytar: false
