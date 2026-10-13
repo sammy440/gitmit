@@ -4,6 +4,7 @@ import { stagedDiff } from "./git.js";
 import type { ResolvedProvider } from "./provider.js";
 import { UsageError } from "./provider.js";
 import type { Settings } from "./settings.js";
+import { pushCurrentBranch } from "./push.js";
 import { applySplit, checkSplittable } from "./split.js";
 
 export interface SplitContext {
@@ -14,6 +15,7 @@ export interface SplitContext {
   redact: boolean;
   dryRun: boolean;
   yes: boolean;
+  push: boolean;
   interactive: boolean;
   out: (line?: string) => void;
   err: (line: string) => void;
@@ -182,9 +184,18 @@ async function apply(ctx: SplitContext, diff: DiffUnits, commits: Commit[]): Pro
       if (!ctx.interactive) ctx.out(`${sha.slice(0, 7)} ${header(planned[i]!.message)}`);
     });
     spin?.stop(`Created ${shas.length} commits.`);
-    if (ctx.interactive) {
-      p.outro(shas.map((sha, i) => `${sha.slice(0, 7)} ${header(planned[i]!.message)}`).join("\n"));
+    const summary = shas.map((sha, i) => `${sha.slice(0, 7)} ${header(planned[i]!.message)}`).join("\n");
+    if (ctx.push) {
+      if (ctx.interactive) {
+        p.log.message(summary);
+        p.log.step("Pushing...");
+      }
+      const output = await pushCurrentBranch(ctx.root, ctx.env, ctx.interactive);
+      if (!ctx.interactive && output) ctx.err(output);
+      if (ctx.interactive) p.outro("Pushed.");
+      return 0;
     }
+    if (ctx.interactive) p.outro(summary);
     return 0;
   } catch (error) {
     spin?.stop("Split failed.");

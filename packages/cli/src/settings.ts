@@ -39,7 +39,7 @@ export async function loadSettings(
     }
   }
 
-  const { provider: _p, model: _m, secrets: _s, ticket: ticketConfig, commitlint: _c, $schema: _x, ...rest } = config;
+  const { provider: _p, model: _m, secrets: _s, ticket: ticketConfig, commitlint: _c, push: _push, $schema: _x, ...rest } = config;
   const message: MessageSettings = { ...rest };
 
   if (commitlint) {

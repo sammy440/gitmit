@@ -33,6 +33,7 @@ gitmit --yes               Commit the top suggestion without asking
 gitmit --provider <name>   openai, anthropic, ollama or rules (offline)
 gitmit --model <name>      Model for the provider
 gitmit --redact            Redact secrets instead of stopping
+gitmit --push              Push after committing (gitmit commits locally, like git commit)
 gitmit split               Split staged changes into several focused commits
 gitmit init                Create a starter .gitmitrc.json
 gitmit config              Show the settings in effect

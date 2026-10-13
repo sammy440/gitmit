@@ -16,6 +16,7 @@ import { ConfigError } from "./config.js";
 import { loadSettings, type Settings } from "./settings.js";
 import { splitCommand } from "./split-command.js";
 import { SplitError } from "./split.js";
+import { PushError, pushCurrentBranch } from "./push.js";
 import { loadEnv, userEnvFile } from "./env.js";
 import { commit, GitError, repoRoot, stagedDiff } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
@@ -41,6 +42,8 @@ Options:
   --model <name>         Model for the provider
   --config <path>        Config file (default: gitmit.config.ts or .gitmitrc.json in the repo root)
   --redact               Redact secrets instead of stopping when one is found
+  --push                 Push after committing (sets the upstream on a new branch)
+  --no-push              Don't push, even if the config says to
   -h, --help             Show this help
   -v, --version          Show the version
 
@@ -79,6 +82,7 @@ interface Flags {
   config?: string;
   redact: boolean;
   force: boolean;
+  push?: boolean;
 }
 
 /** Run the CLI. Returns the process exit code. */
@@ -99,6 +103,8 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         config: { type: "string" },
         redact: { type: "boolean", default: false },
         force: { type: "boolean", default: false },
+        push: { type: "boolean" },
+        "no-push": { type: "boolean" },
         help: { type: "boolean", short: "h", default: false },
         version: { type: "boolean", short: "v", default: false },
       },
@@ -130,6 +136,7 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     config: values.config,
     redact: values.redact,
     force: values.force,
+    push: values["no-push"] ? false : values.push,
   };
 
   try {
@@ -151,6 +158,7 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         redact: flags.redact,
         dryRun: flags.dryRun,
         yes: flags.yes,
+        push: shouldPush(flags, settings),
         interactive,
         out,
         err,
@@ -160,7 +168,13 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     if (command !== undefined) throw new UsageError(`Unknown command "${command}". Run gitmit --help for usage.`);
     return await commitCommand(root, flags, io, out, err);
   } catch (error) {
-    if (error instanceof UsageError || error instanceof ConfigError || error instanceof GitError || error instanceof SplitError) {
+    if (
+      error instanceof UsageError ||
+      error instanceof ConfigError ||
+      error instanceof GitError ||
+      error instanceof SplitError ||
+      error instanceof PushError
+    ) {
       err(`gitmit: ${error.message}`);
       return 1;
     }
@@ -220,7 +234,10 @@ async function commitCommand(
     if (result.redacted) err(`Redacted ${result.secrets.length} possible secret(s) before sending.`);
     if (flags.yes && !flags.dryRun) {
       const code = await commit(root, result.suggestions[0]!.message, { env: io.env });
-      return code;
+      if (code !== 0 || !shouldPush(flags, settings)) return code;
+      const output = await pushCurrentBranch(root, io.env, false);
+      if (output) err(output);
+      return 0;
     }
     printSuggestions(result.suggestions, out);
     if (!flags.dryRun) err("Not a terminal, so nothing was committed. Use --yes to commit the first suggestion.");
@@ -263,7 +280,12 @@ async function commitCommand(
     if (action === "back") continue;
 
     p.outro(action === "edit" ? "Opening your editor..." : "Committing...");
-    return commit(root, choice.message, { edit: action === "edit", env: io.env });
+    const code = await commit(root, choice.message, { edit: action === "edit", env: io.env });
+    if (code !== 0 || !shouldPush(flags, settings)) return code;
+    p.log.step("Pushing...");
+    await pushCurrentBranch(root, io.env, true);
+    p.log.success("Pushed.");
+    return 0;
   }
 }
 
@@ -404,4 +426,9 @@ async function configCommand(root: string, flags: Flags, io: Io, out: (line?: st
   out("Message options:");
   out(JSON.stringify(options, null, 2));
   return 0;
+}
+
+/** The --push / --no-push flag wins over the config's "push" setting. */
+function shouldPush(flags: Flags, settings: Settings): boolean {
+  return flags.push ?? settings.config.push ?? false;
 }

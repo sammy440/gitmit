@@ -41,6 +41,7 @@ export const ConfigSchema = z.strictObject({
     .optional()
     .describe("What to do when a secret is found before calling a remote provider. Default: abort."),
   variants: z.number().int().min(1).max(5).optional().describe("Number of suggestions. Default: 3."),
+  push: z.boolean().optional().describe("Push after committing. Default: false."),
   commitlint: z
     .boolean()
     .optional()

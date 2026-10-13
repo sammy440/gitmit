@@ -125,6 +125,10 @@
       "minimum": 1,
       "maximum": 5
     },
+    "push": {
+      "description": "Push after committing. Default: false.",
+      "type": "boolean"
+    },
     "commitlint": {
       "description": "Use the repository's commitlint config when present. Default: true.",
       "type": "boolean"
