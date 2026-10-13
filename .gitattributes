@@ -1,0 +1,2 @@
+# Fixture diffs must keep their exact bytes, including line endings.
+fixtures/** -text

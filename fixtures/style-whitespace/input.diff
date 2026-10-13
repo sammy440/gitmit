@@ -1,0 +1,15 @@
+diff --git a/src/utils/format.ts b/src/utils/format.ts
+index 4aa3369..79fe129 100644
+--- a/src/utils/format.ts
++++ b/src/utils/format.ts
+@@ -1,7 +1,8 @@
+ export function pad(s: string) {
+-  return s.padStart(2, "0");
++    return s.padStart(2, "0");
+ }
+ 
++
+ export function trim(s: string) {
+-  return s.trim();
++    return s.trim();
+ }

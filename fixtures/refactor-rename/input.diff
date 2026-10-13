@@ -1,0 +1,4 @@
+diff --git a/src/auth/session.ts b/src/auth/sessionStore.ts
+similarity index 100%
+rename from src/auth/session.ts
+rename to src/auth/sessionStore.ts

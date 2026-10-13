@@ -1,0 +1,18 @@
+diff --git a/.prettierrc b/.prettierrc
+new file mode 100644
+index 0000000..109a78d
+--- /dev/null
++++ b/.prettierrc
+@@ -0,0 +1 @@
++{ "semi": false }
+diff --git a/tsconfig.json b/tsconfig.json
+index 8ad9c98..aee0ec9 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -1,5 +1,5 @@
+ {
+   "compilerOptions": {
+-    "strict": false
++    "strict": true
+   }
+ }

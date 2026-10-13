@@ -1,0 +1,26 @@
+diff --git a/README.md b/README.md
+index fc530de..bf99be5 100644
+--- a/README.md
++++ b/README.md
+@@ -336,7 +336,7 @@ setGlobalDispatcher(new ProxyAgent("http://localhost:3128"));
+ ```ts
+ import { Agent } from "undici";
+ 
+-// Note: This makes fetch unsecure against MITM attacks. USE AT YOUR OWN RISK!
++// Note: This makes fetch insecure against MITM attacks. USE AT YOUR OWN RISK!
+ const unsecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
+ await ofetch("https://self-signed.example.com/", { dispatcher: unsecureAgent });
+ ```
+diff --git a/src/utils.ts b/src/utils.ts
+index a773431..3bc0dbf 100644
+--- a/src/utils.ts
++++ b/src/utils.ts
+@@ -31,7 +31,7 @@ export function isJSONSerializable(value: any): boolean {
+   if (value.buffer) {
+     return false;
+   }
+-  // `FormData` and `URLSearchParams` should't have a `toJSON` method,
++  // `FormData` and `URLSearchParams` shouldn't have a `toJSON` method,
+   // but Bun adds it, which is non-standard.
+   if (value instanceof FormData || value instanceof URLSearchParams) {
+     return false;

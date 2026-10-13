@@ -1,0 +1,1 @@
+{ "type": "test", "confidence": "low", "scope": null, "dropped": ["pnpm-lock.yaml"], "source": "unjs/ofetch 7afa20a: test: upgrade to h3 v2" }

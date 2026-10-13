@@ -1,0 +1,23 @@
+diff --git a/package.json b/package.json
+index 3271667..e416593 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "app",
+   "dependencies": {
+-    "zod": "^3.22.0"
++    "zod": "^3.23.8"
+   }
+ }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index e9a734d..616b574 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -1,4 +1,4 @@
+ lockfileVersion: '9.0'
+ packages:
+-  zod@3.22.0:
+-    resolution: {integrity: sha512-aaa}
++  zod@3.23.8:
++    resolution: {integrity: sha512-bbb}

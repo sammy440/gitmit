@@ -1,0 +1,1 @@
+{ "type": "feat", "confidence": "low", "scope": "sdk", "dropped": ["packages/sdk/src/generated/types.ts", "packages/sdk/test/__snapshots__/client.test.ts.snap"] }

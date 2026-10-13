@@ -1,0 +1,10 @@
+diff --git a/packages/api/src/users.js b/packages/api/src/users.js
+index d32904b..299b258 100644
+--- a/packages/api/src/users.js
++++ b/packages/api/src/users.js
+@@ -1,4 +1,5 @@
+ export function getUserName(user) {
++  if (!user?.profile?.name) return "";
+   return user.profile.name.trim();
+ }
+ 
