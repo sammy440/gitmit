@@ -33,11 +33,18 @@ gitmit --yes               Commit the top suggestion without asking
 gitmit --provider <name>   openai, anthropic, ollama or rules (offline)
 gitmit --model <name>      Model for the provider
 gitmit --redact            Redact secrets instead of stopping
+gitmit split               Split staged changes into several focused commits
 gitmit init                Create a starter .gitmitrc.json
 gitmit config              Show the settings in effect
 gitmit hook install        Fill in a suggestion whenever you run `git commit`
 gitmit hook uninstall      Remove the hook
 ```
+
+## Splitting messy changes
+
+`gitmit split` turns one big set of staged changes into several focused commits. It groups the changes by intent (with an AI provider) or by area and kind of change (offline), writes a message for each, and lets you move changes between commits or edit messages before anything happens.
+
+It only touches the staging area, never your files. The plan is rehearsed in a temporary index first, and if anything fails, such as a commit hook, your original commit and staged changes are restored exactly. Use `--dry-run` to see the plan, or `--yes` to apply it without asking.
 
 ## Team settings
 

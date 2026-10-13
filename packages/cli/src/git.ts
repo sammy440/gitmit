@@ -34,7 +34,7 @@ export async function repoRoot(cwd: string, env?: Env): Promise<string | undefin
  * The staged diff in the exact format the parser expects, regardless of user
  * settings such as diff.noprefix, diff.mnemonicPrefix, color.ui or diff.relative.
  */
-export function stagedDiff(root: string, env?: Env): Promise<string> {
+export function stagedDiff(root: string, env?: Env, options: { binary?: boolean } = {}): Promise<string> {
   return git(
     [
       "-c",
@@ -48,10 +48,31 @@ export function stagedDiff(root: string, env?: Env): Promise<string> {
       "--src-prefix=a/",
       "--dst-prefix=b/",
       "-M",
+      // Binary patch data, so a split can re-apply binary files exactly.
+      ...(options.binary ? ["--binary"] : []),
     ],
     root,
     env,
   );
+}
+
+export interface RunResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
+
+/** Run git without throwing; capture output. */
+export function gitRun(args: readonly string[], cwd: string, env: Env = process.env): Promise<RunResult> {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn("git", args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+    child.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
+    child.on("error", reject);
+    child.on("close", (code) => resolvePromise({ code: code ?? 1, stdout, stderr }));
+  });
 }
 
 /** The directory git runs hooks from, honoring core.hooksPath (e.g. husky). */

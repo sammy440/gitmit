@@ -14,6 +14,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConfigError } from "./config.js";
 import { loadSettings, type Settings } from "./settings.js";
+import { splitCommand } from "./split-command.js";
+import { SplitError } from "./split.js";
 import { loadEnv, userEnvFile } from "./env.js";
 import { commit, GitError, repoRoot, stagedDiff } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
@@ -26,14 +28,15 @@ const HELP = `gitmit: commit messages from your staged changes
 
 Usage:
   gitmit [options]               Suggest messages for staged changes and commit
+  gitmit split                   Split staged changes into several focused commits
   gitmit init [--force]          Create a starter .gitmitrc.json
   gitmit config                  Show the settings gitmit will use here
   gitmit hook install [--force]  Fill in a suggestion whenever you run \`git commit\`
   gitmit hook uninstall          Remove the hook
 
 Options:
-  --dry-run              Show suggestions without committing
-  -y, --yes              Commit the top suggestion without asking
+  --dry-run              Show suggestions (or the split plan) without committing
+  -y, --yes              Commit the top suggestion (or apply the split) without asking
   --provider <name>      openai, anthropic, ollama or rules (offline)
   --model <name>         Model for the provider
   --config <path>        Config file (default: gitmit.config.ts or .gitmitrc.json in the repo root)
@@ -136,11 +139,28 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     const [command, sub, arg] = positionals;
     if (command === "hook") return await hookCommand(root, sub, arg, flags, io, out);
     if (command === "init") return await initCommand(root, flags, out);
+    if (command === "split") {
+      const { settings, provider } = await loadAll(root, flags, io);
+      const interactive = Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.yes && !flags.dryRun;
+      if (!interactive && provider.note) err(provider.note);
+      return await splitCommand({
+        root,
+        env: io.env,
+        settings,
+        provider,
+        redact: flags.redact,
+        dryRun: flags.dryRun,
+        yes: flags.yes,
+        interactive,
+        out,
+        err,
+      });
+    }
     if (command === "config") return await configCommand(root, flags, io, out);
     if (command !== undefined) throw new UsageError(`Unknown command "${command}". Run gitmit --help for usage.`);
     return await commitCommand(root, flags, io, out, err);
   } catch (error) {
-    if (error instanceof UsageError || error instanceof ConfigError || error instanceof GitError) {
+    if (error instanceof UsageError || error instanceof ConfigError || error instanceof GitError || error instanceof SplitError) {
       err(`gitmit: ${error.message}`);
       return 1;
     }

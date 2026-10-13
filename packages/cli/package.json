@@ -1,6 +1,6 @@
 {
   "name": "@gitmit/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Generate clean, convention-compliant git commit messages from your staged changes.",
   "license": "MIT",
   "repository": {
