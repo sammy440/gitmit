@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@gitmit/core": ["../core/src/index.ts"],
+      "@gitmit/cli": ["../cli/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}

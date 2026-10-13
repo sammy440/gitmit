@@ -1,0 +1,168 @@
+{
+  "name": "gitmit",
+  "displayName": "gitmit: Commit Messages",
+  "description": "Convention-compliant commit messages from your staged changes. Follows your commitlint rules, keeps secrets on your machine, and splits messy changes into focused commits.",
+  "version": "0.1.0",
+  "publisher": "gitmit",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "homepage": "https://gitmit-frontend.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sammy440/gitmit.git",
+    "directory": "packages/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/sammy440/gitmit/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "commit",
+    "commit message",
+    "conventional commits",
+    "commitlint",
+    "ai"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitmit.generate",
+        "title": "Generate Commit Message",
+        "category": "gitmit",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "gitmit.split",
+        "title": "Split into Focused Commits",
+        "category": "gitmit",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "gitmit.setApiKey",
+        "title": "Set API Key",
+        "category": "gitmit"
+      },
+      {
+        "command": "gitmit.clearApiKey",
+        "title": "Remove API Key",
+        "category": "gitmit"
+      },
+      {
+        "command": "gitmit.openSettings",
+        "title": "Open Settings",
+        "category": "gitmit"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitmit.generate",
+          "when": "scmProvider == git",
+          "group": "navigation@-2"
+        },
+        {
+          "command": "gitmit.split",
+          "when": "scmProvider == git",
+          "group": "navigation@-1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "gitmit.generate",
+          "when": "gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "gitmit.split",
+          "when": "gitOpenRepositoryCount != 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "gitmit",
+      "properties": {
+        "gitmit.provider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "openai",
+            "anthropic",
+            "ollama",
+            "rules"
+          ],
+          "enumDescriptions": [
+            "Use the project's gitmit config if it sets a provider, otherwise the first provider with an API key, otherwise offline rules.",
+            "OpenAI. Set your key with \"gitmit: Set API Key\".",
+            "Anthropic. Set your key with \"gitmit: Set API Key\".",
+            "Local models through Ollama. Nothing leaves your machine.",
+            "Offline rules only. No AI, no network."
+          ],
+          "default": "auto",
+          "description": "Where commit messages come from."
+        },
+        "gitmit.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model for the provider, e.g. gpt-5-mini or claude-opus-5-5. Leave empty for the provider's default."
+        },
+        "gitmit.ollamaHost": {
+          "type": "string",
+          "default": "",
+          "description": "Ollama server URL. Leave empty for http://localhost:11434."
+        },
+        "gitmit.showSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Pick from several suggestions. When off, the top suggestion goes straight into the commit message box."
+        },
+        "gitmit.onSecretFound": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "abort",
+            "redact"
+          ],
+          "enumDescriptions": [
+            "Show what was found and ask whether to send a redacted version.",
+            "Stop without sending anything.",
+            "Replace secrets with markers and send the rest."
+          ],
+          "default": "ask",
+          "description": "What to do when the staged changes look like they contain a secret, before calling a remote AI."
+        },
+        "gitmit.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a gitmit config file, relative to the repository root. Leave empty to find gitmit.config.ts or .gitmitrc.json automatically."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && vsce package --no-dependencies",
+    "test:e2e": "node esbuild.mjs && node test/integration/run.mjs"
+  },
+  "devDependencies": {
+    "@gitmit/cli": "workspace:*",
+    "@gitmit/core": "workspace:*",
+    "@types/vscode": "~1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.2"
+  }
+}

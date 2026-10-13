@@ -1,0 +1,10 @@
+**
+!dist/extension.js
+!dist/index.js
+!dist/babel.cjs
+!dist/commitlint.schema.json
+!media/**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE

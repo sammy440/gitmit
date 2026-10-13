@@ -11,3 +11,7 @@ coverage/
 
 # Private planning notes (kept locally, not committed)
 PROJECT.md
+
+# VS Code test downloads
+.vscode-test/
+*.vsix
