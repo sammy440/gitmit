@@ -174,7 +174,7 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
     if (seen.has(header)) continue;
     seen.add(header);
 
-    const body = options.bodyStyle === "none" ? undefined : raw.body?.trim() || undefined;
+    const body = options.bodyStyle === "none" ? undefined : wrapBody(raw.body?.trim() ?? "") || undefined;
     const suggestion: Suggestion = { type, description, message: body ? `${header}\n\n${body}` : header };
     if (scope) suggestion.scope = scope;
     if (body) suggestion.body = body;
@@ -182,6 +182,38 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
   }
 
   return { suggestions: suggestions.slice(0, options.variants), problems };
+}
+
+/** Git convention: body lines at most 72 characters. */
+export const BODY_LINE_LENGTH = 72;
+
+/**
+ * Wrap body text at `width`. Bullet items ("- ", "* ", "1. ") wrap with a
+ * hanging indent. Words longer than the width (URLs, paths) are never split.
+ */
+export function wrapBody(body: string, width = BODY_LINE_LENGTH): string {
+  return body
+    .split("\n")
+    .flatMap((line) => {
+      if (line.length <= width) return [line.trimEnd()];
+      const marker = /^(\s*(?:[-*]|\d+[.)])\s+)/.exec(line)?.[1] ?? /^\s*/.exec(line)![0];
+      const indent = " ".repeat(marker.length);
+      const words = line.slice(marker.length).split(/\s+/).filter(Boolean);
+      const out: string[] = [];
+      let current = marker;
+      for (const word of words) {
+        const prefix = out.length === 0 ? marker : indent;
+        if (current.length > prefix.length && current.length + 1 + word.length > width) {
+          out.push(current);
+          current = indent + word;
+        } else {
+          current += (current.length > prefix.length ? " " : "") + word;
+        }
+      }
+      out.push(current);
+      return out;
+    })
+    .join("\n");
 }
 
 function normalizeScope(scope: string | null): string | undefined {

@@ -220,12 +220,12 @@ Time is not a constraint, so each phase is built to a finished, tested state bef
 ### Phase 3: CLI
 **Goal:** a usable tool that commits from the terminal.
 
-- [ ] `gitmit` reads `git diff --staged`
-- [ ] Interactive picker with 3 suggestions, plus edit option
-- [ ] Commit the chosen message
-- [ ] `--dry-run`, `--provider`, `--config`, `--yes` flags
-- [ ] `prepare-commit-msg` hook installer (`gitmit hook install`)
-- [ ] Clear errors: no staged changes, not a git repo, missing API key
+- [x] `gitmit` reads `git diff --staged`
+- [x] Interactive picker with 3 suggestions, plus edit option
+- [x] Commit the chosen message
+- [x] `--dry-run`, `--provider`, `--config`, `--yes` flags (plus `--model`, `--redact`)
+- [x] `prepare-commit-msg` hook installer (`gitmit hook install`)
+- [x] Clear errors: no staged changes, not a git repo, missing API key
 - [ ] Publish to npm, verify `npx @gitmit/cli` works
 
 **Done when:** a developer can run `npx @gitmit/cli` in any repo and commit with a generated message.
@@ -322,7 +322,9 @@ export default defineConfig({
 });
 ```
 
-API keys and models come from environment variables (or a `.env` file, see `.env.example`): `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `OLLAMA_HOST`, `OLLAMA_MODEL`. Keys are never written to config files.
+API keys and models come from environment variables or from a user-level file outside every repository, `~/.config/gitmit/.env` (`%APPDATA%\gitmit\.env` on Windows): `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `OLLAMA_HOST`, `OLLAMA_MODEL`. Keys never go in project config. Without a key, gitmit falls back to the offline rules provider.
+
+Today the CLI reads `.gitmitrc.json` (or `.gitmitrc`, JSON) from the repo root with these fields: `provider`, `model`, `types`, `scopes`, `scopeFromPaths`, `subjectMaxLength`, `bodyStyle`, `language`, `ignore`, `secrets`, `variants`. The TypeScript config, user config and commitlint integration come in Phase 4.
 
 Config resolution order: CLI flags, then project config, then user config (`~/.config/gitmit`), then defaults.
 

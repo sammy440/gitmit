@@ -81,7 +81,7 @@ async function runGenerate(diff) {
     result.suggestions.forEach((s, i) => {
       const [header, ...rest] = s.message.split("\n");
       console.log(`  ${i + 1}. ${header}`);
-      for (const line of rest) console.log(`     ${line}`);
+      for (const line of rest) console.log(line ? `     ${line}` : "");
       console.log("");
     });
     console.log(`  done in ${((Date.now() - started) / 1000).toFixed(1)}s`);

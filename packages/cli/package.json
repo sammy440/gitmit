@@ -1,0 +1,25 @@
+{
+  "name": "@gitmit/cli",
+  "version": "0.0.0",
+  "description": "Generate clean, convention-compliant git commit messages from your staged changes.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "gitmit": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "@gitmit/core": "workspace:*",
+    "zod": "^4.6.6"
+  }
+}

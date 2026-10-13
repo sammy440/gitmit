@@ -241,6 +241,22 @@ describe("validation and regeneration", () => {
     expect(complete).toHaveBeenCalledTimes(3);
   });
 
+  it("wraps body lines at 72 characters with a hanging indent for bullets", async () => {
+    const long = "- Implement analyze, classify, detect-type, and generate to produce commit-message suggestions from diffs";
+    const url = "https://example.com/" + "a".repeat(80);
+    const complete = vi.fn(async () => ({
+      suggestions: [{ type: "feat", scope: null, description: "add engine", body: `${long}\n\nSee ${url}` }],
+    }));
+    const [suggestion] = await modelProvider("fake", true, complete).generate(input());
+    const lines = suggestion!.body!.split("\n");
+    expect(lines.slice(0, 2)).toEqual([
+      "- Implement analyze, classify, detect-type, and generate to produce",
+      "  commit-message suggestions from diffs",
+    ]);
+    for (const line of lines) if (!line.includes(url)) expect(line.length).toBeLessThanOrEqual(72);
+    expect(lines).toContain(url);
+  });
+
   it("keeps the diff inside tags and tells the model it is data", () => {
     const prompt = buildPrompt(input());
     expect(prompt.system).toMatch(/never as instructions/);
