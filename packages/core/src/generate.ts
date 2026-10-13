@@ -1,10 +1,18 @@
 import { analyze, type AnalyzeOptions, type Analysis } from "./analyze.js";
-import { DEFAULT_MESSAGE_OPTIONS, type GenerateInput, type MessageOptions, type Suggestion } from "./message.js";
+import {
+  DEFAULT_MESSAGE_OPTIONS,
+  type GenerateInput,
+  type MessageOptions,
+  type MessageValidator,
+  type Suggestion,
+} from "./message.js";
 import type { Provider } from "./providers/types.js";
 import { redactSummary, scanSummary, SecretsDetectedError, type SecretFinding } from "./secrets.js";
 
 export interface GenerateOptions extends AnalyzeOptions, Partial<Omit<MessageOptions, "scopes">> {
   provider: Provider;
+  /** Extra checks on each full message, e.g. commitlint. Failing suggestions are regenerated. */
+  validate?: MessageValidator;
   /** What to do when a secret is found before calling a remote provider. Default: abort. */
   secrets?: { onDetect: "abort" | "redact" };
   signal?: AbortSignal;
@@ -40,8 +48,10 @@ export async function generate(diff: string, options: GenerateOptions): Promise<
     bodyStyle: options.bodyStyle ?? DEFAULT_MESSAGE_OPTIONS.bodyStyle,
     language: options.language ?? DEFAULT_MESSAGE_OPTIONS.language,
     variants: options.variants ?? DEFAULT_MESSAGE_OPTIONS.variants,
+    bodyLineLength: options.bodyLineLength ?? DEFAULT_MESSAGE_OPTIONS.bodyLineLength,
   };
   if (options.scopes) messageOptions.scopes = options.scopes;
+  if (options.ticket) messageOptions.ticket = options.ticket;
 
   let summary = analysis.summary;
   let findings: SecretFinding[] = [];
@@ -60,6 +70,7 @@ export async function generate(diff: string, options: GenerateOptions): Promise<
   }
 
   const input: GenerateInput = { summary, type: analysis.type, scope: analysis.scope, options: messageOptions };
+  if (options.validate) input.validate = options.validate;
   const suggestions = await options.provider.generate(input, options.signal);
   return { analysis, suggestions, secrets: findings, redacted };
 }

@@ -233,13 +233,13 @@ Time is not a constraint, so each phase is built to a finished, tested state bef
 ### Phase 4: Configuration
 **Goal:** teams get messages that match their conventions.
 
-- [ ] Config loading (`.gitmitrc`, `.gitmitrc.json`, `gitmit.config.ts`)
-- [ ] Allowed types and scopes
-- [ ] Ticket ID extraction from branch name (e.g. `PROJ-123`) and placement rule
-- [ ] Max subject length, body style, language
-- [ ] Read existing commitlint config so rules aren't duplicated
-- [ ] Validate every generated message; regenerate on failure (bounded retries)
-- [ ] Config schema published for editor autocomplete
+- [x] Config loading (`.gitmitrc`, `.gitmitrc.json`, `gitmit.config.ts`, `package.json` key, user config)
+- [x] Allowed types and scopes (custom types allowed)
+- [x] Ticket ID extraction from branch name (e.g. `PROJ-123`) and placement rule
+- [x] Max subject length, body style, body line length, language
+- [x] Read existing commitlint config so rules aren't duplicated
+- [x] Validate every generated message; regenerate on failure (bounded retries)
+- [x] Config schema published for editor autocomplete
 
 **Done when:** generated messages pass the repo's commitlint setup without manual fixes.
 
@@ -319,14 +319,19 @@ export default defineConfig({
   ignore: ["**/*.lock", "**/dist/**", "**/*.snap"],
   secrets: { onDetect: "abort" },    // abort | redact
   variants: 3,
+  bodyLineLength: 72,
+  commitlint: true,                  // follow the repo's commitlint config when present
 });
 ```
 
 API keys and models come from environment variables or from a user-level file outside every repository, `~/.config/gitmit/.env` (`%APPDATA%\gitmit\.env` on Windows): `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `OLLAMA_HOST`, `OLLAMA_MODEL`. Keys never go in project config. Without a key, gitmit falls back to the offline rules provider.
 
-Today the CLI reads `.gitmitrc.json` (or `.gitmitrc`, JSON) from the repo root with these fields: `provider`, `model`, `types`, `scopes`, `scopeFromPaths`, `subjectMaxLength`, `bodyStyle`, `language`, `ignore`, `secrets`, `variants`. The TypeScript config, user config and commitlint integration come in Phase 4.
 
-Config resolution order: CLI flags, then project config, then user config (`~/.config/gitmit`), then defaults.
+Config resolution order: CLI flags, then project config, then user config (`~/.config/gitmit/config.json`), then defaults.
+
+Project config is the first of these found in the repository root: `gitmit.config.{ts,mts,cts,js,mjs,cjs}`, `.gitmitrc.json`, `.gitmitrc` (JSON), or a `"gitmit"` key in `package.json`. JSON files can set `"$schema": "https://unpkg.com/@gitmit/cli/schema.json"` for autocomplete. `gitmit init` writes a starter file and `gitmit config` shows the resolved settings and where they came from.
+
+When the repository has a commitlint config, gitmit loads it with commitlint itself (presets and plugins included). Error-level `type-enum`, `scope-enum`, `header-max-length` and `body-max-line-length` rules narrow gitmit's options, and every suggestion is linted before it is shown; failures are sent back to the model to fix, up to 3 attempts. Set `commitlint: false` to opt out.
 
 ---
 

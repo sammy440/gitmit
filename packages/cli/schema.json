@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON schema for editor autocomplete.",
+      "type": "string"
+    },
+    "provider": {
+      "description": "Where suggestions come from. Default: the first provider with an API key, else rules.",
+      "type": "string",
+      "enum": [
+        "anthropic",
+        "openai",
+        "ollama",
+        "rules"
+      ]
+    },
+    "model": {
+      "description": "Model name for the provider.",
+      "type": "string"
+    },
+    "types": {
+      "description": "Allowed commit types.",
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      }
+    },
+    "scopes": {
+      "description": "Allowed scopes. Omit to allow any.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scopeFromPaths": {
+      "description": "Glob to scope mapping, e.g. { \"apps/web/**\": \"web\" }. The first match wins.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "ticket": {
+      "description": "Add a ticket ID from the branch name, e.g. PROJ-123 from feat/PROJ-123-login.",
+      "type": "object",
+      "properties": {
+        "fromBranch": {
+          "description": "Regex with one capture group for the ticket ID. Default: \"([A-Z][A-Z0-9]+-\\\\d+)\".",
+          "type": "string"
+        },
+        "position": {
+          "description": "Where the ticket goes. Default: suffix.",
+          "type": "string",
+          "enum": [
+            "prefix",
+            "suffix",
+            "footer"
+          ]
+        },
+        "required": {
+          "description": "Refuse to commit when the branch has no ticket ID.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "subjectMaxLength": {
+      "description": "Maximum header length. Default: 72.",
+      "type": "integer",
+      "minimum": 20,
+      "maximum": 200
+    },
+    "bodyStyle": {
+      "description": "Body format. Default: bullets.",
+      "type": "string",
+      "enum": [
+        "none",
+        "prose",
+        "bullets"
+      ]
+    },
+    "bodyLineLength": {
+      "description": "Wrap body lines at this width. Default: 72.",
+      "type": "integer",
+      "minimum": 40,
+      "maximum": 200
+    },
+    "language": {
+      "description": "Language for messages, e.g. \"en\". Default: en.",
+      "type": "string"
+    },
+    "ignore": {
+      "description": "Extra globs to treat as noise.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "secrets": {
+      "description": "What to do when a secret is found before calling a remote provider. Default: abort.",
+      "type": "object",
+      "properties": {
+        "onDetect": {
+          "type": "string",
+          "enum": [
+            "abort",
+            "redact"
+          ]
+        }
+      },
+      "required": [
+        "onDetect"
+      ],
+      "additionalProperties": false
+    },
+    "variants": {
+      "description": "Number of suggestions. Default: 3.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "commitlint": {
+      "description": "Use the repository's commitlint config when present. Default: true.",
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "title": "gitmit configuration",
+  "$id": "https://unpkg.com/@gitmit/cli/schema.json"
+}

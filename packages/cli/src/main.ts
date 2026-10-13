@@ -10,7 +10,10 @@ import {
   type ProviderName,
   type Suggestion,
 } from "@gitmit/core";
-import { ConfigError, loadConfig, type Config } from "./config.js";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { ConfigError } from "./config.js";
+import { loadSettings, type Settings } from "./settings.js";
 import { loadEnv, userEnvFile } from "./env.js";
 import { commit, GitError, repoRoot, stagedDiff } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
@@ -23,6 +26,8 @@ const HELP = `gitmit: commit messages from your staged changes
 
 Usage:
   gitmit [options]               Suggest messages for staged changes and commit
+  gitmit init [--force]          Create a starter .gitmitrc.json
+  gitmit config                  Show the settings gitmit will use here
   gitmit hook install [--force]  Fill in a suggestion whenever you run \`git commit\`
   gitmit hook uninstall          Remove the hook
 
@@ -31,7 +36,7 @@ Options:
   -y, --yes              Commit the top suggestion without asking
   --provider <name>      openai, anthropic, ollama or rules (offline)
   --model <name>         Model for the provider
-  --config <path>        Config file (default: .gitmitrc.json in the repo root)
+  --config <path>        Config file (default: gitmit.config.ts or .gitmitrc.json in the repo root)
   --redact               Redact secrets instead of stopping when one is found
   -h, --help             Show this help
   -v, --version          Show the version
@@ -130,6 +135,8 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
 
     const [command, sub, arg] = positionals;
     if (command === "hook") return await hookCommand(root, sub, arg, flags, io, out);
+    if (command === "init") return await initCommand(root, flags, out);
+    if (command === "config") return await configCommand(root, flags, io, out);
     if (command !== undefined) throw new UsageError(`Unknown command "${command}". Run gitmit --help for usage.`);
     return await commitCommand(root, flags, io, out, err);
   } catch (error) {
@@ -150,21 +157,28 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
   }
 }
 
-async function prepare(root: string, flags: Flags, io: Io) {
-  const { config } = await loadConfig(root, flags.config);
+async function loadAll(root: string, flags: Flags, io: Io, requireTicket = true) {
   const env = loadEnv(io.env);
-  const provider = resolveProvider(env, flags.provider ?? config.provider, flags.model ?? config.model);
-  const diff = await stagedDiff(root, io.env);
-  if (!diff.trim()) throw new UsageError("No staged changes. Stage files with `git add` first.");
-  return { config, provider, diff };
+  const settings = await loadSettings(root, io.env, {
+    explicit: flags.config,
+    overrides: { provider: flags.provider, model: flags.model },
+    requireTicket,
+  });
+  const provider = resolveProvider(env, settings.config.provider, settings.config.model);
+  return { settings, provider };
 }
 
-function generateOptions(config: Config, provider: ResolvedProvider, redact: boolean) {
-  const { provider: _name, model: _model, secrets, ...rest } = config;
+async function prepare(root: string, flags: Flags, io: Io) {
+  const diff = await stagedDiff(root, io.env);
+  if (!diff.trim()) throw new UsageError("No staged changes. Stage files with `git add` first.");
+  return { ...(await loadAll(root, flags, io)), diff };
+}
+
+function generateOptions(settings: Settings, provider: ResolvedProvider, redact: boolean) {
   return {
-    ...rest,
+    ...settings.options,
     provider: provider.provider,
-    secrets: { onDetect: redact ? ("redact" as const) : (secrets?.onDetect ?? "abort") },
+    secrets: { onDetect: redact ? ("redact" as const) : (settings.config.secrets?.onDetect ?? "abort") },
   };
 }
 
@@ -175,13 +189,14 @@ async function commitCommand(
   out: (line?: string) => void,
   err: (line: string) => void,
 ): Promise<number> {
-  const { config, provider, diff } = await prepare(root, flags, io);
+  const { settings, provider, diff } = await prepare(root, flags, io);
   const interactive = Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.yes && !flags.dryRun;
   const label = `${provider.name}${provider.model ? ` (${provider.model})` : ""}`;
 
   if (!interactive) {
     if (provider.note) err(provider.note);
-    const result = await generate(diff, generateOptions(config, provider, flags.redact));
+    for (const note of settings.notes) err(note);
+    const result = await generate(diff, generateOptions(settings, provider, flags.redact));
     if (result.redacted) err(`Redacted ${result.secrets.length} possible secret(s) before sending.`);
     if (flags.yes && !flags.dryRun) {
       const code = await commit(root, result.suggestions[0]!.message, { env: io.env });
@@ -194,10 +209,12 @@ async function commitCommand(
 
   p.intro("gitmit");
   if (provider.note) p.log.info(provider.note);
+  for (const note of settings.notes) p.log.info(note);
+  if (settings.ticket) p.log.info(`Ticket ${settings.ticket.id} from branch ${settings.branch}.`);
 
   let redact = flags.redact;
   while (true) {
-    const result = await runWithSpinner(diff, config, provider, redact, label);
+    const result = await runWithSpinner(diff, settings, provider, redact, label);
     if (result === "redact") {
       redact = true;
       continue;
@@ -232,7 +249,7 @@ async function commitCommand(
 
 async function runWithSpinner(
   diff: string,
-  config: Config,
+  settings: Settings,
   provider: ResolvedProvider,
   redact: boolean,
   label: string,
@@ -240,7 +257,7 @@ async function runWithSpinner(
   const spin = p.spinner();
   spin.start(`Writing suggestions with ${label}`);
   try {
-    const result = await generate(diff, generateOptions(config, provider, redact));
+    const result = await generate(diff, generateOptions(settings, provider, redact));
     spin.stop(result.redacted ? `Done. Redacted ${result.secrets.length} possible secret(s) before sending.` : "Done.");
     return result;
   } catch (error) {
@@ -313,8 +330,8 @@ async function hookCommand(
 /** Called by the git hook. Never fails the commit: problems become a comment in the message file. */
 async function hookRun(root: string, file: string, flags: Flags, io: Io): Promise<number> {
   try {
-    const { config, provider, diff } = await prepare(root, flags, io);
-    const result = await generate(diff, generateOptions(config, provider, flags.redact));
+    const { settings, provider, diff } = await prepare(root, flags, io);
+    const result = await generate(diff, generateOptions(settings, provider, flags.redact));
     const [first, ...rest] = result.suggestions;
     if (first) await writeHookMessage(file, first.message, rest.map((s) => s.message.split("\n")[0]!));
   } catch (error) {
@@ -326,5 +343,45 @@ async function hookRun(root: string, file: string, flags: Flags, io: Io): Promis
           : (error as Error).message;
     await writeHookMessage(file, `# gitmit: no suggestion (${reason})`, []).catch(() => {});
   }
+  return 0;
+}
+
+const STARTER_CONFIG = {
+  $schema: "https://unpkg.com/@gitmit/cli/schema.json",
+  types: ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"],
+  subjectMaxLength: 72,
+  bodyStyle: "bullets",
+  language: "en",
+};
+
+async function initCommand(root: string, flags: Flags, out: (line?: string) => void): Promise<number> {
+  const path = join(root, ".gitmitrc.json");
+  try {
+    await writeFile(path, `${JSON.stringify(STARTER_CONFIG, null, 2)}\n`, { flag: flags.force ? "w" : "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new UsageError(`${path} already exists. Re-run with --force to overwrite it.`);
+    }
+    throw error;
+  }
+  out(`Created ${path}`);
+  out("Edit it to match your team's rules. Commit it so everyone shares the same settings.");
+  out("API keys never go in this file; they belong in your environment or your user .env file.");
+  return 0;
+}
+
+async function configCommand(root: string, flags: Flags, io: Io, out: (line?: string) => void): Promise<number> {
+  const { settings, provider } = await loadAll(root, flags, io, false);
+  const { validate: _v, ...options } = settings.options;
+  out(`Provider: ${provider.name}${provider.model ? ` (${provider.model})` : ""}`);
+  if (provider.note) out(provider.note);
+  out(`Config sources (later wins): ${settings.layers.length ? "" : "none, using defaults"}`);
+  for (const layer of settings.layers) out(`  - ${layer.source}`);
+  out(`commitlint: ${settings.commitlint ? settings.commitlint.source : settings.config.commitlint === false ? "disabled" : "not found"}`);
+  if (settings.config.ticket) {
+    out(`Ticket: ${settings.ticket ? `${settings.ticket.id} (${settings.ticket.position})` : "none on this branch"}${settings.branch ? `, branch ${settings.branch}` : ""}`);
+  }
+  out("Message options:");
+  out(JSON.stringify(options, null, 2));
   return 0;
 }

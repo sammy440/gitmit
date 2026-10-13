@@ -1,7 +1,7 @@
 import { NOISE_CATEGORIES } from "../classify.js";
-import { validateDraft, type Draft, type GenerateInput } from "../message.js";
+import { finalizeDraft, type Draft, type GenerateInput } from "../message.js";
 import type { FileSummary } from "../types.js";
-import type { Provider } from "./types.js";
+import { ProviderError, type Provider } from "./types.js";
 
 /** Template messages from the analysis alone. No model, no network. */
 export function rulesProvider(): Provider {
@@ -9,7 +9,10 @@ export function rulesProvider(): Provider {
     name: "rules",
     remote: false,
     async generate(input) {
-      const { suggestions } = validateDraft(draftFromRules(input), input);
+      const { suggestions, problems } = await finalizeDraft(draftFromRules(input), input);
+      if (suggestions.length === 0) {
+        throw new ProviderError("rules", `no template message passes the configured rules (${problems.join("; ")})`);
+      }
       return suggestions;
     },
   };
@@ -21,8 +24,11 @@ function draftFromRules(input: GenerateInput): Draft {
   const scope = input.scope.confidence === "high" ? (input.scope.scope ?? null) : null;
   const descriptions = [...new Set(describe(relevant, input))].slice(0, input.options.variants);
   const body = input.options.bodyStyle === "none" ? null : bodyFor(relevant);
+  // The detected type may not be allowed by the team's rules; fall back to chore, then the first allowed type.
+  const allowed = input.options.types;
+  const type = allowed.includes(input.type.type) ? input.type.type : allowed.includes("chore") ? "chore" : allowed[0]!;
   return {
-    suggestions: descriptions.map((description) => ({ type: input.type.type, scope, description, body })),
+    suggestions: descriptions.map((description) => ({ type, scope, description, body })),
   };
 }
 

@@ -17,14 +17,29 @@ export const DEFAULT_TYPES: readonly CommitType[] = [
 
 export type BodyStyle = "none" | "prose" | "bullets";
 
+export type TicketPosition = "prefix" | "suffix" | "footer";
+
+export interface Ticket {
+  /** The ticket ID, e.g. "PROJ-123". */
+  id: string;
+  /** prefix: "feat: PROJ-123 add x"; suffix: "feat: add x (PROJ-123)"; footer: a "Refs: PROJ-123" trailer. */
+  position: TicketPosition;
+}
+
+/** Checks a full commit message and returns problems; empty means valid. Used for commitlint. */
+export type MessageValidator = (message: string) => Promise<string[]>;
+
 export interface MessageOptions {
-  /** Allowed commit types. */
-  types: readonly CommitType[];
+  /** Allowed commit types. Teams may add their own, e.g. "wip". */
+  types: readonly string[];
   /** Allowed scopes. Undefined allows any. */
   scopes?: readonly string[];
-  /** Maximum length of the header line, `type(scope): description`. */
+  /** Maximum length of the header line, `type(scope): description`, including any ticket. */
   subjectMaxLength: number;
   bodyStyle: BodyStyle;
+  /** Maximum body line length; longer lines are wrapped. */
+  bodyLineLength: number;
+  ticket?: Ticket;
   /** Language for the description and body, e.g. "en". */
   language: string;
   /** Number of suggestions to ask for. */
@@ -35,12 +50,13 @@ export const DEFAULT_MESSAGE_OPTIONS: MessageOptions = {
   types: DEFAULT_TYPES,
   subjectMaxLength: 72,
   bodyStyle: "bullets",
+  bodyLineLength: 72,
   language: "en",
   variants: 3,
 };
 
 export interface Suggestion {
-  type: CommitType;
+  type: string;
   scope?: string;
   description: string;
   body?: string;
@@ -54,6 +70,8 @@ export interface GenerateInput {
   type: TypeDetection;
   scope: ScopeInference;
   options: MessageOptions;
+  /** Extra checks on each full message, e.g. the repository's commitlint rules. */
+  validate?: MessageValidator;
 }
 
 /** The shape every model must return. All fields are required so it works with strict structured outputs. */
@@ -86,6 +104,13 @@ Rules for every suggestion:
 - When the change spans unrelated concerns, describe the main one.
 - Each suggestion must be a distinct, reasonable wording; do not pad with near-duplicates.`;
 
+/** Header length left for the model once the ticket is placed. */
+function headerBudget(options: MessageOptions): number {
+  const ticket = options.ticket;
+  if (!ticket || ticket.position === "footer") return options.subjectMaxLength;
+  return options.subjectMaxLength - ticket.id.length - (ticket.position === "suffix" ? 3 : 1);
+}
+
 export function buildPrompt(input: GenerateInput, feedback?: string): Prompt {
   const { type, scope, options, summary } = input;
   const lines: string[] = [];
@@ -109,7 +134,10 @@ export function buildPrompt(input: GenerateInput, feedback?: string): Prompt {
   }
   if (options.scopes?.length) lines.push(`Allowed scopes: ${options.scopes.join(", ")}.`);
 
-  lines.push(`Header length: "type(scope): description" must be at most ${options.subjectMaxLength} characters.`);
+  lines.push(`Header length: "type(scope): description" must be at most ${headerBudget(options)} characters.`);
+  if (options.ticket) {
+    lines.push(`Do not mention the ticket ${options.ticket.id}; it is added automatically.`);
+  }
   lines.push(
     options.bodyStyle === "none"
       ? "Body: null."
@@ -148,7 +176,7 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
 
   for (const [index, raw] of draft.suggestions.entries()) {
     const label = `suggestion ${index + 1}`;
-    const type = (forcedType ?? raw.type.trim().toLowerCase()) as CommitType;
+    const type = forcedType ?? raw.type.trim().toLowerCase();
     if (!options.types.includes(type)) {
       problems.push(`${label}: type "${raw.type}" is not one of ${options.types.join(", ")}`);
       continue;
@@ -160,11 +188,15 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
       scope = undefined;
     }
 
-    const description = normalizeDescription(raw.description);
+    let description = normalizeDescription(raw.description);
     if (!description) {
       problems.push(`${label}: description is empty`);
       continue;
     }
+    const ticket = options.ticket;
+    const mentionsTicket = ticket !== undefined && description.toUpperCase().includes(ticket.id.toUpperCase());
+    if (ticket && !mentionsTicket && ticket.position === "prefix") description = `${ticket.id} ${description}`;
+    if (ticket && !mentionsTicket && ticket.position === "suffix") description = `${description} (${ticket.id})`;
 
     const header = `${type}${scope ? `(${scope})` : ""}: ${description}`;
     if (header.length > options.subjectMaxLength) {
@@ -174,14 +206,34 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
     if (seen.has(header)) continue;
     seen.add(header);
 
-    const body = options.bodyStyle === "none" ? undefined : wrapBody(raw.body?.trim() ?? "") || undefined;
-    const suggestion: Suggestion = { type, description, message: body ? `${header}\n\n${body}` : header };
+    const body =
+      options.bodyStyle === "none" ? undefined : wrapBody(raw.body?.trim() ?? "", options.bodyLineLength) || undefined;
+    const footer = ticket?.position === "footer" ? `Refs: ${ticket.id}` : undefined;
+    const message = [header, body, footer].filter(Boolean).join("\n\n");
+    const suggestion: Suggestion = { type, description, message };
     if (scope) suggestion.scope = scope;
     if (body) suggestion.body = body;
     suggestions.push(suggestion);
   }
 
   return { suggestions: suggestions.slice(0, options.variants), problems };
+}
+
+/**
+ * validateDraft plus the input's external validator (e.g. commitlint).
+ * Suggestions that fail are dropped and their problems reported.
+ */
+export async function finalizeDraft(draft: Draft, input: GenerateInput): Promise<ValidationResult> {
+  const result = validateDraft(draft, input);
+  if (!input.validate) return result;
+  const checked = await Promise.all(result.suggestions.map(async (s) => [s, await input.validate!(s.message)] as const));
+  const suggestions: Suggestion[] = [];
+  const problems = [...result.problems];
+  for (const [suggestion, issues] of checked) {
+    if (issues.length === 0) suggestions.push(suggestion);
+    else problems.push(`"${suggestion.message.split("\n")[0]}": ${issues.join(", ")}`);
+  }
+  return { suggestions, problems };
 }
 
 /** Git convention: body lines at most 72 characters. */

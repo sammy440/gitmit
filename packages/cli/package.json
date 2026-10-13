@@ -1,6 +1,6 @@
 {
   "name": "@gitmit/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Generate clean, convention-compliant git commit messages from your staged changes.",
   "license": "MIT",
   "repository": {
@@ -22,11 +22,22 @@
     "cli"
   ],
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema.json": "./schema.json",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "gitmit": "./dist/cli.js"
   },
   "files": [
     "dist",
+    "schema.json",
     "README.md",
     "LICENSE"
   ],
@@ -34,13 +45,16 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --clean",
+    "build": "tsup src/cli.ts src/index.ts --format esm --dts --clean && node scripts/schema.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
+    "@commitlint/lint": "^21.2.3",
+    "@commitlint/load": "^21.2.3",
     "@gitmit/core": "workspace:*",
+    "jiti": "^2.7.0",
     "zod": "^4.6.6"
   },
   "publishConfig": {

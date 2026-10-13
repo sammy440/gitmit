@@ -33,21 +33,30 @@ gitmit --yes               Commit the top suggestion without asking
 gitmit --provider <name>   openai, anthropic, ollama or rules (offline)
 gitmit --model <name>      Model for the provider
 gitmit --redact            Redact secrets instead of stopping
+gitmit init                Create a starter .gitmitrc.json
+gitmit config              Show the settings in effect
 gitmit hook install        Fill in a suggestion whenever you run `git commit`
 gitmit hook uninstall      Remove the hook
 ```
 
-## Project settings
+## Team settings
 
-Add `.gitmitrc.json` to the repository root:
+Run `gitmit init` to create `.gitmitrc.json`, or use `gitmit.config.ts`:
 
-```json
-{
-  "types": ["feat", "fix", "docs", "refactor", "test", "chore"],
-  "scopeFromPaths": { "apps/web/**": "web", "apps/api/**": "api" },
-  "subjectMaxLength": 72,
-  "bodyStyle": "bullets"
-}
+```ts
+import { defineConfig } from "@gitmit/cli";
+
+export default defineConfig({
+  types: ["feat", "fix", "docs", "refactor", "test", "chore"],
+  scopeFromPaths: { "apps/web/**": "web", "apps/api/**": "api" },
+  ticket: { position: "suffix" }, // PROJ-123 from feat/PROJ-123-login
+  subjectMaxLength: 72,
+  bodyStyle: "bullets",
+});
 ```
+
+- **commitlint:** if the repository has a commitlint config, gitmit follows it and lints every suggestion before showing it. Set `commitlint: false` to opt out.
+- **Personal defaults** go in `~/.config/gitmit/config.json`; project settings override them.
+- **`gitmit config`** shows the settings in effect and where each came from.
 
 MIT licensed. Source and roadmap: https://github.com/sammy440/gitmit

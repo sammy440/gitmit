@@ -1,4 +1,4 @@
-import { buildPrompt, validateDraft } from "../message.js";
+import { buildPrompt, finalizeDraft } from "../message.js";
 import { ProviderError, type CompleteFn, type Provider } from "./types.js";
 
 /** Attempts per generate call: the first try plus regenerations after invalid output. */
@@ -16,7 +16,7 @@ export function modelProvider(name: string, remote: boolean, complete: CompleteF
       let feedback: string | undefined;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         const draft = await complete(buildPrompt(input, feedback), signal);
-        const { suggestions, problems } = validateDraft(draft, input);
+        const { suggestions, problems } = await finalizeDraft(draft, input);
         if (suggestions.length > 0) return suggestions;
         feedback = problems.length ? problems.join("; ") : "no suggestions were returned";
       }
