@@ -1,6 +1,6 @@
 {
   "name": "@gitmit/core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Diff analysis engine for gitmit: parse, filter, classify, summarize.",
   "license": "MIT",
   "repository": {
