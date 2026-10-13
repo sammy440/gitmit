@@ -1,4 +1,3 @@
-import { DraftSchema } from "../message.js";
 import { modelProvider } from "./model.js";
 import { DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, ProviderError, type Provider, type ProviderSettings } from "./types.js";
 
@@ -25,7 +24,7 @@ export function anthropicProvider(settings: ProviderSettings = {}): Provider {
       });
     }));
 
-  return modelProvider("anthropic", true, async (prompt, signal) => {
+  return modelProvider("anthropic", true, async (prompt, output, signal) => {
     const [anthropic, { betaZodOutputFormat }] = await Promise.all([
       getClient(),
       import("@anthropic-ai/sdk/helpers/beta/zod"),
@@ -39,8 +38,8 @@ export function anthropicProvider(settings: ProviderSettings = {}): Provider {
           system: prompt.system,
           messages: [{ role: "user", content: prompt.user }],
           output_config: {
-            format: betaZodOutputFormat(DraftSchema),
-            // Writing a commit message is a simple task; low effort keeps it fast and cheap.
+            format: betaZodOutputFormat(output.schema),
+            // Commit messages and split plans are simple tasks; low effort keeps them fast and cheap.
             ...(EFFORT_MODELS.test(model) ? { effort: "low" as const } : {}),
           },
           ...(useFallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),

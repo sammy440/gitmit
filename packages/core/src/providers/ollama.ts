@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { DraftSchema } from "../message.js";
 import { modelProvider } from "./model.js";
 import { RetryableError, timeoutSignal, withRetry } from "./retry.js";
 import { DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, ProviderError, type Provider, type ProviderSettings } from "./types.js";
@@ -7,15 +6,13 @@ import { DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, ProviderError, type Provider, 
 export const OLLAMA_DEFAULT_MODEL = "llama3.2";
 export const OLLAMA_DEFAULT_URL = "http://localhost:11434";
 
-const OUTPUT_SCHEMA = z.toJSONSchema(DraftSchema);
-
 /** Local models through Ollama. Counts as remote only when the URL points to another machine. */
 export function ollamaProvider(settings: ProviderSettings = {}): Provider {
   const model = settings.model ?? OLLAMA_DEFAULT_MODEL;
   const baseURL = (settings.baseURL ?? OLLAMA_DEFAULT_URL).replace(/\/+$/, "");
   const fetchFn = settings.fetch ?? globalThis.fetch;
 
-  return modelProvider("ollama", !isLocal(baseURL), (prompt, signal) =>
+  return modelProvider("ollama", !isLocal(baseURL), (prompt, output, signal) =>
     withRetry(
       async () => {
         let response: Response;
@@ -26,7 +23,7 @@ export function ollamaProvider(settings: ProviderSettings = {}): Provider {
             body: JSON.stringify({
               model,
               stream: false,
-              format: OUTPUT_SCHEMA,
+              format: z.toJSONSchema(output.schema),
               messages: [
                 { role: "system", content: prompt.system },
                 { role: "user", content: prompt.user },
@@ -52,7 +49,7 @@ export function ollamaProvider(settings: ProviderSettings = {}): Provider {
 
         const body = (await response.json()) as { message?: { content?: string } };
         try {
-          return DraftSchema.parse(JSON.parse(body.message?.content ?? ""));
+          return JSON.parse(body.message?.content ?? "") as unknown;
         } catch (error) {
           throw new ProviderError("ollama", "the response did not match the expected format", { cause: error });
         }

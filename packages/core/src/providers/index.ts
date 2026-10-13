@@ -27,4 +27,4 @@ export { rulesProvider } from "./rules.js";
 export { modelProvider, MAX_ATTEMPTS } from "./model.js";
 export { withRetry, RetryableError, timeoutSignal } from "./retry.js";
 export { ProviderError, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_RETRIES } from "./types.js";
-export type { Provider, ProviderSettings, CompleteFn } from "./types.js";
+export type { Provider, ProviderSettings, CompleteFn, OutputSpec } from "./types.js";

@@ -39,6 +39,8 @@ function describe(files: readonly FileSummary[], input: GenerateInput): string[]
   const names = files.map((f) => basename(f.path));
   const area = input.scope.scope ?? commonDir(files.map((f) => f.path));
 
+  // Named additions say more than file names, so they come first.
+  if (symbols.length > 0) out.push(`add ${list(symbols.map((s) => `\`${s}\``))}`);
   if (files.length === 1) {
     const file = files[0]!;
     const name = names[0]!;
@@ -47,7 +49,6 @@ function describe(files: readonly FileSummary[], input: GenerateInput): string[]
     else if (file.status === "renamed") out.push(`rename ${basename(file.oldPath ?? "")} to ${name}`);
     else out.push(`update ${name}`);
   }
-  if (symbols.length > 0) out.push(`add ${list(symbols.map((s) => `\`${s}\``))}`);
   if (removed.length > 0 && symbols.length === 0) out.push(`remove ${list(removed.map((s) => `\`${s}\``))}`);
   if (files.length > 1) out.push(`update ${list(names)}`);
   if (area) out.push(`update ${area}`);

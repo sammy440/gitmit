@@ -1,4 +1,3 @@
-import { DraftSchema } from "../message.js";
 import { modelProvider } from "./model.js";
 import { DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, ProviderError, type Provider, type ProviderSettings } from "./types.js";
 
@@ -20,7 +19,7 @@ export function openaiProvider(settings: ProviderSettings = {}): Provider {
       });
     }));
 
-  return modelProvider("openai", true, async (prompt, signal) => {
+  return modelProvider("openai", true, async (prompt, output, signal) => {
     const [openai, { zodResponseFormat }] = await Promise.all([getClient(), import("openai/helpers/zod")]);
     try {
       const completion = await openai.chat.completions.parse(
@@ -30,7 +29,7 @@ export function openaiProvider(settings: ProviderSettings = {}): Provider {
             { role: "system", content: prompt.system },
             { role: "user", content: prompt.user },
           ],
-          response_format: zodResponseFormat(DraftSchema, "commit_suggestions"),
+          response_format: zodResponseFormat(output.schema, output.name),
         },
         { signal },
       );

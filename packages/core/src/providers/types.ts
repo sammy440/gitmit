@@ -1,14 +1,24 @@
-import type { Draft, GenerateInput, Prompt, Suggestion } from "../message.js";
+import type { z } from "zod";
+import type { GenerateInput, Prompt, Suggestion } from "../message.js";
 
 export interface Provider {
   name: string;
   /** True when the provider sends data off this machine. Remote providers only receive secret-scanned input. */
   remote: boolean;
   generate(input: GenerateInput, signal?: AbortSignal): Promise<Suggestion[]>;
+  /** Structured completion for other tasks (e.g. split planning). Absent for providers without a model. */
+  complete?: CompleteFn;
 }
 
-/** Sends one prompt to a model and returns its structured answer. */
-export type CompleteFn = (prompt: Prompt, signal?: AbortSignal) => Promise<Draft>;
+/** The structured answer a prompt must produce. */
+export interface OutputSpec {
+  schema: z.ZodType;
+  /** Short identifier for the format, e.g. "commit_suggestions". */
+  name: string;
+}
+
+/** Sends one prompt to a model and returns its structured answer, validated against `output.schema`. */
+export type CompleteFn = (prompt: Prompt, output: OutputSpec, signal?: AbortSignal) => Promise<unknown>;
 
 export interface ProviderSettings {
   apiKey?: string;

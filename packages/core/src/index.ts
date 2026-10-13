@@ -11,3 +11,17 @@ export * from "./message.js";
 export * from "./providers/index.js";
 export { generate, EmptyDiffError, type GenerateOptions, type GenerateResult } from "./generate.js";
 export { analyze, type AnalyzeOptions, type Analysis } from "./analyze.js";
+export {
+  parseRawDiff,
+  diffUnits,
+  buildPatch,
+  heuristicPlan,
+  planSplit,
+  type RawFile,
+  type SplitUnit,
+  type SplitGroup,
+  type SplitPlan,
+  type DiffUnits,
+  type PlanOptions,
+  type PlanResult,
+} from "./split.js";
