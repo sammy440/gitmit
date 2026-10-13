@@ -141,9 +141,11 @@ export function buildPrompt(input: GenerateInput, feedback?: string): Prompt {
   lines.push(
     options.bodyStyle === "none"
       ? "Body: null."
-      : options.bodyStyle === "bullets"
-        ? 'Body: a few "- " bullet points on what changed and why, or null for trivial changes.'
-        : "Body: one short paragraph on what changed and why, or null for trivial changes.",
+      : isSmallChange(input)
+        ? "Body: null. This change is small, so the header says it all."
+        : options.bodyStyle === "bullets"
+          ? 'Body: at most 3 short "- " bullet points on what changed and why, or null if the header says it all.'
+          : "Body: one or two short sentences on what changed and why, or null if the header says it all.",
   );
   lines.push(`Language: write the description and body in "${options.language}".`);
   lines.push(`Return exactly ${options.variants} suggestions.`);
@@ -207,7 +209,9 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
     seen.add(header);
 
     const body =
-      options.bodyStyle === "none" ? undefined : wrapBody(raw.body?.trim() ?? "", options.bodyLineLength) || undefined;
+      options.bodyStyle === "none" || isSmallChange(input)
+        ? undefined
+        : wrapBody(raw.body?.trim() ?? "", options.bodyLineLength) || undefined;
     const footer = ticket?.position === "footer" ? `Refs: ${ticket.id}` : undefined;
     const message = [header, body, footer].filter(Boolean).join("\n\n");
     const suggestion: Suggestion = { type, description, message };
@@ -234,6 +238,16 @@ export async function finalizeDraft(draft: Draft, input: GenerateInput): Promise
     else problems.push(`"${suggestion.message.split("\n")[0]}": ${issues.join(", ")}`);
   }
   return { suggestions, problems };
+}
+
+/** At or below this many changed lines (in at most this many files), a message needs no body. */
+export const SMALL_CHANGE_LINES = 10;
+const SMALL_CHANGE_FILES = 2;
+
+/** A change small enough that the header alone describes it, so no body is written. */
+export function isSmallChange(input: Pick<GenerateInput, "summary">): boolean {
+  const { files, additions, deletions } = input.summary.stats;
+  return files <= SMALL_CHANGE_FILES && additions + deletions <= SMALL_CHANGE_LINES;
 }
 
 /** Git convention: body lines at most 72 characters. */

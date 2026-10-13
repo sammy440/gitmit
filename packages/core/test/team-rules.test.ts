@@ -85,3 +85,28 @@ describe("custom types and external validation", () => {
     for (const line of suggestions[0]!.body!.split("\n")) expect(line.length).toBeLessThanOrEqual(40);
   });
 });
+
+describe("message length", () => {
+  const withBody = (prompts: string[]) =>
+    modelProvider("fake", true, async (prompt) => {
+      prompts.push(prompt.user);
+      return { suggestions: [{ type: "fix", scope: null, description: "guard against a missing profile", body: "- add a null check\n- return an empty name" }] };
+    });
+
+  it("leaves the body out for a small change, even if the model writes one", async () => {
+    const prompts: string[] = [];
+    const { suggestions, analysis } = await generate(fixture("fix-null-guard"), { provider: withBody(prompts) });
+    expect(analysis.summary.stats.additions + analysis.summary.stats.deletions).toBeLessThanOrEqual(10);
+    expect(prompts[0]).toMatch(/Body: null\. This change is small/);
+    expect(suggestions[0]!.message).toBe("fix(api): guard against a missing profile");
+    expect(suggestions[0]!.body).toBeUndefined();
+  });
+
+  it("keeps a short body for larger changes", async () => {
+    const prompts: string[] = [];
+    const { suggestions } = await generate(fixture("feat-login-form"), { provider: withBody(prompts) });
+    expect(prompts[0]).toMatch(/at most 3 short "- " bullet points/);
+    expect(suggestions[0]!.body).toBe("- add a null check\n- return an empty name");
+  });
+});
+
