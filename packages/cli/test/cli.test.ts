@@ -83,7 +83,15 @@ describe("gitmit", () => {
   it("explains when nothing is staged", async () => {
     const result = await run(["--dry-run"]);
     expect(result.code).toBe(1);
-    expect(result.stderr).toMatch(/No staged changes/);
+    expect(result.stderr).toMatch(/No staged changes, and nothing else has changed/);
+  });
+
+  it("points to git add -A when changes exist but aren't staged", async () => {
+    write("docs/a.md", "a\n");
+    write("src/b.ts", "b\n");
+    const result = await run(["--dry-run"]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/2 files have changes that aren't staged\. Run `git add -A`.*`git add \.` only stages the current folder/);
   });
 
   it("explains a missing API key for an explicit provider", async () => {

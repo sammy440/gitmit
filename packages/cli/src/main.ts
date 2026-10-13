@@ -18,7 +18,7 @@ import { splitCommand } from "./split-command.js";
 import { SplitError } from "./split.js";
 import { PushError, pushCurrentBranch } from "./push.js";
 import { loadEnv, userEnvFile } from "./env.js";
-import { commit, GitError, repoRoot, stagedDiff } from "./git.js";
+import { commit, GitError, nothingStagedMessage, repoRoot, stagedDiff, unpushedCount } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
 import { resolveProvider, UsageError, type ResolvedProvider } from "./provider.js";
 
@@ -147,6 +147,10 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     if (command === "hook") return await hookCommand(root, sub, arg, flags, io, out);
     if (command === "init") return await initCommand(root, flags, out);
     if (command === "split") {
+      if (flags.push && !flags.dryRun) {
+        const pushed = await pushIfNothingStaged(root, io, err);
+        if (pushed !== undefined) return pushed;
+      }
       const { settings, provider } = await loadAll(root, flags, io);
       const interactive = Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.yes && !flags.dryRun;
       if (!interactive && provider.note) err(provider.note);
@@ -204,7 +208,7 @@ async function loadAll(root: string, flags: Flags, io: Io, requireTicket = true)
 
 async function prepare(root: string, flags: Flags, io: Io) {
   const diff = await stagedDiff(root, io.env);
-  if (!diff.trim()) throw new UsageError("No staged changes. Stage files with `git add` first.");
+  if (!diff.trim()) throw new UsageError(await nothingStagedMessage(root, io.env));
   return { ...(await loadAll(root, flags, io)), diff };
 }
 
@@ -223,6 +227,10 @@ async function commitCommand(
   out: (line?: string) => void,
   err: (line: string) => void,
 ): Promise<number> {
+  if (flags.push && !flags.dryRun) {
+    const pushed = await pushIfNothingStaged(root, io, err);
+    if (pushed !== undefined) return pushed;
+  }
   const { settings, provider, diff } = await prepare(root, flags, io);
   const interactive = Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.yes && !flags.dryRun;
   const label = `${provider.name}${provider.model ? ` (${provider.model})` : ""}`;
@@ -431,4 +439,20 @@ async function configCommand(root: string, flags: Flags, io: Io, out: (line?: st
 /** The --push / --no-push flag wins over the config's "push" setting. */
 function shouldPush(flags: Flags, settings: Settings): boolean {
   return flags.push ?? settings.config.push ?? false;
+}
+
+/**
+ * With --push and nothing staged, push the commits that are waiting instead
+ * of stopping. Returns undefined when there is something to commit, or
+ * nothing to push (the usual "no staged changes" message follows).
+ */
+async function pushIfNothingStaged(root: string, io: Io, err: (line: string) => void): Promise<number | undefined> {
+  if ((await stagedDiff(root, io.env)).trim()) return undefined;
+  const waiting = await unpushedCount(root, io.env);
+  if (waiting === 0) return undefined;
+  const what = waiting === undefined ? "this branch" : `${waiting} commit${waiting === 1 ? "" : "s"}`;
+  err(`Nothing staged to commit. Pushing ${what}...`);
+  const output = await pushCurrentBranch(root, io.env, Boolean(io.stdout.isTTY) && io.stdinIsTTY);
+  if (output) err(output);
+  return 0;
 }

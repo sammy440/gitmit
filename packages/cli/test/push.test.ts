@@ -101,6 +101,31 @@ describe("--push", () => {
     expect(remoteLog()).toHaveLength(4);
   });
 
+  it("pushes waiting commits when nothing is staged", async () => {
+    stage("docs/a.md", "a\n");
+    await repo.run(["--yes", "--provider", "rules"]);
+    stage("docs/b.md", "b\n");
+    await repo.run(["--yes", "--provider", "rules"]);
+    const result = await repo.run(["--push"]);
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stderr).toMatch(/Nothing staged to commit\. Pushing this branch/);
+    expect(remoteLog()).toHaveLength(3);
+
+    stage("docs/c.md", "c\n");
+    await repo.run(["--yes", "--provider", "rules"]);
+    const again = await repo.run(["split", "--push"]);
+    expect(again.stderr).toMatch(/Pushing 1 commit\.\.\./);
+    expect(remoteLog()).toHaveLength(4);
+  });
+
+  it("says there is nothing to do when nothing is staged or waiting", async () => {
+    stage("docs/a.md", "a\n");
+    await repo.run(["--yes", "--push", "--provider", "rules"]);
+    const result = await repo.run(["--push"]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/nothing else has changed/);
+  });
+
   it("is listed in the help", async () => {
     const help = await repo.run(["--help"]);
     expect(help.stdout).toMatch(/--push/);

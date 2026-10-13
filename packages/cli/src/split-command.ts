@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
 import { buildPatch, generate, planSplit, type DiffUnits, type SplitPlan } from "@gitmit/core";
-import { stagedDiff } from "./git.js";
+import { nothingStagedMessage, stagedDiff } from "./git.js";
 import type { ResolvedProvider } from "./provider.js";
 import { UsageError } from "./provider.js";
 import type { Settings } from "./settings.js";
@@ -30,7 +30,7 @@ interface Commit {
 export async function splitCommand(ctx: SplitContext): Promise<number> {
   await checkSplittable(ctx.root, ctx.env);
   const diffText = await stagedDiff(ctx.root, ctx.env, { binary: true });
-  if (!diffText.trim()) throw new UsageError("No staged changes. Stage files with `git add` first.");
+  if (!diffText.trim()) throw new UsageError(await nothingStagedMessage(ctx.root, ctx.env));
 
   const secrets = { onDetect: ctx.redact ? ("redact" as const) : (ctx.settings.config.secrets?.onDetect ?? "abort") };
   const label = `${ctx.provider.name}${ctx.provider.model ? ` (${ctx.provider.model})` : ""}`;

@@ -56,6 +56,20 @@ export function stagedDiff(root: string, env?: Env, options: { binary?: boolean 
   );
 }
 
+/** Why nothing is staged, with a hint when there are changes git add would pick up. */
+export async function nothingStagedMessage(root: string, env?: Env): Promise<string> {
+  const status = await git(["status", "--porcelain", "--untracked-files=normal"], root, env).catch(() => "");
+  const pending = status.split("\n").filter((line) => line && (line[0] === " " || line.startsWith("??"))).length;
+  if (pending === 0) return "No staged changes, and nothing else has changed. There is nothing to commit.";
+  return `No staged changes, but ${pending} file${pending === 1 ? " has" : "s have"} changes that aren't staged. Run \`git add -A\` to stage everything (\`git add .\` only stages the current folder).`;
+}
+
+/** How many local commits the remote doesn't have yet; undefined when the branch has no upstream. */
+export async function unpushedCount(root: string, env?: Env): Promise<number | undefined> {
+  const result = await gitRun(["rev-list", "--count", "@{u}..HEAD"], root, env);
+  return result.code === 0 ? Number(result.stdout.trim()) : undefined;
+}
+
 export interface RunResult {
   code: number;
   stdout: string;
