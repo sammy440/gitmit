@@ -8,7 +8,7 @@
     "url": "git+https://github.com/sammy440/gitmit.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/sammy440/gitmit#readme",
+  "homepage": "https://gitmit-frontend.vercel.app/docs/api",
   "bugs": {
     "url": "https://github.com/sammy440/gitmit/issues"
   },

@@ -4,6 +4,9 @@
 
 [![npm](https://img.shields.io/npm/v/@gitmit/cli?label=%40gitmit%2Fcli)](https://www.npmjs.com/package/@gitmit/cli)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![website](https://img.shields.io/badge/try_it-in_your_browser-88d982)](https://gitmit-frontend.vercel.app)
+
+**[Try it in your browser](https://gitmit-frontend.vercel.app)** · [Documentation](https://gitmit-frontend.vercel.app/docs) · [npm](https://www.npmjs.com/package/@gitmit/cli)
 
 ```
 $ git add -A
@@ -69,7 +72,9 @@ Requires **Node.js 20.12 or later** and **git**.
 npm install -g @gitmit/cli
 ```
 
-This installs the `gitmit` command. To try it without installing:
+This installs the `gitmit` command. To see it work before installing anything, paste a diff into the [online demo](https://gitmit-frontend.vercel.app). It runs offline in your browser.
+
+To try the CLI without installing:
 
 ```bash
 npx @gitmit/cli
@@ -571,7 +576,8 @@ gitmit is a TypeScript monorepo managed with pnpm (through Corepack, which ships
 gitmit/
 ├── packages/
 │   ├── core/      @gitmit/core: parsing, classification, providers, secrets, splitting
-│   └── cli/       @gitmit/cli: the gitmit command, config, commitlint, hooks
+│   ├── cli/       @gitmit/cli: the gitmit command, config, commitlint, hooks
+│   └── vscode/    the VS Code extension
 ├── fixtures/      real diffs with expected type and scope
 └── scripts/       developer tools (try.mjs)
 ```
@@ -619,11 +625,12 @@ Built:
 - The CLI, interactive picker and git hook
 - Team configuration, commitlint integration and ticket IDs
 - Commit splitting
+- A web demo and docs site: [gitmit-frontend.vercel.app](https://gitmit-frontend.vercel.app)
+- A VS Code extension: generate messages and split commits from the Source Control panel (`packages/vscode`)
 
 Next:
 
-- A web demo: paste a diff and try gitmit in the browser, offline by default
-- A VS Code extension: generate messages from the Source Control panel
+- Publishing the VS Code extension to the Marketplace and Open VSX
 - Shell completions, Windows polish, and a provider benchmark
 
 ---

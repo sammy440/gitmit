@@ -14,4 +14,4 @@ console.log(suggestions[0].message);
 
 Providers: `openai`, `anthropic`, `ollama`, and `rules` (offline, no network). Remote providers only receive input that passed the secret scanner.
 
-MIT licensed. Source: https://github.com/sammy440/gitmit
+Documentation: https://gitmit-frontend.vercel.app/docs/api · MIT licensed · Source: https://github.com/sammy440/gitmit

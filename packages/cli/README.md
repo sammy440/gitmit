@@ -2,6 +2,8 @@
 
 Generate clean, Conventional Commits messages from your staged changes. Works offline, keeps secrets on your machine, and respects your team's rules.
 
+**[Website and live demo](https://gitmit-frontend.vercel.app)** · [Documentation](https://gitmit-frontend.vercel.app/docs)
+
 ```
 npm install -g @gitmit/cli
 git add -A
@@ -67,4 +69,4 @@ export default defineConfig({
 - **Personal defaults** go in `~/.config/gitmit/config.json`; project settings override them.
 - **`gitmit config`** shows the settings in effect and where each came from.
 
-MIT licensed. Source and roadmap: https://github.com/sammy440/gitmit
+MIT licensed. Website: https://gitmit-frontend.vercel.app · Source: https://github.com/sammy440/gitmit
