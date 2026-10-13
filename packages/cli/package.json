@@ -1,25 +1,49 @@
 {
   "name": "@gitmit/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Generate clean, convention-compliant git commit messages from your staged changes.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sammy440/gitmit.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/sammy440/gitmit#readme",
+  "bugs": {
+    "url": "https://github.com/sammy440/gitmit/issues"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "commit-message",
+    "conventional-commits",
+    "commitlint",
+    "ai",
+    "cli"
+  ],
   "type": "module",
   "bin": {
     "gitmit": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20.12"
   },
   "scripts": {
     "build": "tsup src/cli.ts --format esm --clean",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
     "@gitmit/core": "workspace:*",
     "zod": "^4.6.6"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

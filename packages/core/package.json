@@ -1,8 +1,26 @@
 {
   "name": "@gitmit/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Diff analysis engine for gitmit: parse, filter, classify, summarize.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sammy440/gitmit.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/sammy440/gitmit#readme",
+  "bugs": {
+    "url": "https://github.com/sammy440/gitmit/issues"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "commit-message",
+    "conventional-commits",
+    "commitlint",
+    "ai",
+    "cli"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -15,16 +33,22 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
     "openai": "^7.32.0",
     "zod": "^4.6.6"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

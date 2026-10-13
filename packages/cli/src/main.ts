@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 import {
@@ -15,7 +16,8 @@ import { commit, GitError, repoRoot, stagedDiff } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
 import { resolveProvider, UsageError, type ResolvedProvider } from "./provider.js";
 
-export const VERSION = "0.0.0";
+// Read from package.json so the version is set in one place. Resolves from both src/ and dist/.
+export const VERSION: string = createRequire(import.meta.url)("../package.json").version;
 
 const HELP = `gitmit: commit messages from your staged changes
 
