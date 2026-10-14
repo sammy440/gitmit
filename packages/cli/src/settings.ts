@@ -18,10 +18,7 @@ export interface Settings {
   notes: string[];
 }
 
-/**
- * Everything that shapes a message: config layers, the repository's
- * commitlint rules (which win where they are stricter) and the branch ticket.
- */
+/** Config layers, the repo's commitlint rules and the branch ticket, combined. */
 export async function loadSettings(
   root: string,
   env: NodeJS.ProcessEnv,

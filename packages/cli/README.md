@@ -39,6 +39,9 @@ gitmit --model <name>      Model for the provider
 gitmit --redact            Redact secrets instead of stopping
 gitmit --push              Push after committing (gitmit commits locally, like git commit)
 gitmit split               Split staged changes into several focused commits
+gitmit pr                  Write a pull request title and description for this branch
+gitmit pr --create         ...and push the branch and open it (--draft for a draft)
+gitmit pr --update         ...and update the open pull request
 gitmit login               Sign in with GitHub to use the key saved in your gitmit account
 gitmit logout              Sign out on this computer
 gitmit account             Show your account and saved keys
@@ -53,6 +56,12 @@ gitmit hook uninstall      Remove the hook
 `gitmit split` turns one big set of staged changes into several focused commits. It groups the changes by intent (with an AI provider) or by area and kind of change (offline), writes a message for each, and lets you move changes between commits or edit messages before anything happens.
 
 It only touches the staging area, never your files. The plan is rehearsed in a temporary index first, and if anything fails, such as a commit hook, your original commit and staged changes are restored exactly. Use `--dry-run` to see the plan, or `--yes` to apply it without asking.
+
+## Pull requests
+
+`gitmit pr` describes your whole branch for reviewers: a Conventional Commits title (it becomes the commit when the pull request is squash-merged) and a description with a summary, the changes and how to test them. If the repository has a pull request template, gitmit fills it in. The base branch is the remote's default branch; use `--base <branch>` to pick another.
+
+With [GitHub's CLI](https://cli.github.com) installed, `--create` pushes the branch and opens the pull request, and `--update` replaces the title and description of the one already open.
 
 ## Team settings
 

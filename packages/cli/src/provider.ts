@@ -19,10 +19,7 @@ export interface ResolvedProvider {
 
 const KEY_VARS: Partial<Record<ProviderName, string>> = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY" };
 
-/**
- * Pick the provider: an explicit choice wins; otherwise a local API key;
- * otherwise the signed-in gitmit account; otherwise offline rules.
- */
+/** Pick the provider: explicit choice, then a local API key, then the gitmit account, then offline rules. */
 export function resolveProvider(
   env: NodeJS.ProcessEnv,
   requested?: ProviderName,

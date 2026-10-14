@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { ConfigError } from "./config.js";
 import { loadSettings, type Settings } from "./settings.js";
 import { splitCommand } from "./split-command.js";
+import { prCommand } from "./pr-command.js";
 import { SplitError } from "./split.js";
 import { PushError, pushCurrentBranch } from "./push.js";
 import { account, login, logout, readAuth } from "./auth.js";
@@ -31,6 +32,9 @@ const HELP = `gitmit: commit messages from your staged changes
 Usage:
   gitmit [options]               Suggest messages for staged changes and commit
   gitmit split                   Split staged changes into several focused commits
+  gitmit pr                      Write a pull request title and description for this branch
+  gitmit pr --create [--draft]   ...and open the pull request on GitHub (needs the gh CLI)
+  gitmit pr --update             ...and replace the open pull request's title and description
   gitmit init [--force]          Create a starter .gitmitrc.json
   gitmit config                  Show the settings gitmit will use here
   gitmit hook install [--force]  Fill in a suggestion whenever you run \`git commit\`
@@ -48,6 +52,7 @@ Options:
   --redact               Redact secrets instead of stopping when one is found
   --push                 Push after committing (sets the upstream on a new branch)
   --no-push              Don't push, even if the config says to
+  --base <branch>        For pr: the branch to compare with (default: the remote's default branch)
   -h, --help             Show this help
   -v, --version          Show the version
 
@@ -87,6 +92,10 @@ interface Flags {
   redact: boolean;
   force: boolean;
   push?: boolean;
+  base?: string;
+  create: boolean;
+  draft: boolean;
+  update: boolean;
 }
 
 /** Run the CLI. Returns the process exit code. */
@@ -108,6 +117,10 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         redact: { type: "boolean", default: false },
         force: { type: "boolean", default: false },
         push: { type: "boolean" },
+        base: { type: "string" },
+        create: { type: "boolean", default: false },
+        draft: { type: "boolean", default: false },
+        update: { type: "boolean", default: false },
         "no-push": { type: "boolean" },
         help: { type: "boolean", short: "h", default: false },
         version: { type: "boolean", short: "v", default: false },
@@ -141,6 +154,10 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     redact: values.redact,
     force: values.force,
     push: values["no-push"] ? false : values.push,
+    base: values.base,
+    create: values.create || values.draft,
+    draft: values.draft,
+    update: values.update,
   };
 
   try {
@@ -155,6 +172,23 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     const [command, sub, arg] = positionals;
     if (command === "hook") return await hookCommand(root, sub, arg, flags, io, out);
     if (command === "init") return await initCommand(root, flags, out);
+    if (command === "pr") {
+      const { settings, provider } = await loadAll(root, flags, io, false);
+      return await prCommand({
+        root,
+        env: io.env,
+        settings,
+        provider,
+        base: flags.base,
+        create: flags.create,
+        draft: flags.draft,
+        update: flags.update,
+        redact: flags.redact,
+        interactive: Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.dryRun,
+        out,
+        err,
+      });
+    }
     if (command === "split") {
       if (flags.push && !flags.dryRun) {
         const pushed = await pushIfNothingStaged(root, io, err);

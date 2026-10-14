@@ -37,6 +37,7 @@ $ gitmit
 - [Choosing an AI provider](#choosing-an-ai-provider)
 - [Commands](#commands)
 - [Splitting messy changes](#splitting-messy-changes)
+- [Pull requests](#pull-requests)
 - [The git hook](#the-git-hook)
 - [Team configuration](#team-configuration)
 - [commitlint](#commitlint)
@@ -60,6 +61,7 @@ Most AI commit tools send your whole diff to a model and paste back whatever com
 - **Secrets never leave your machine.** Before anything is sent to a remote AI, gitmit scans for API keys, tokens, private keys and files like `.env`. If it finds one, nothing is sent.
 - **Works offline.** No API key? gitmit still writes messages, using rules alone. Prefer local models? Use [Ollama](https://ollama.com).
 - **Splits messy changes.** Staged three unrelated things at once? `gitmit split` turns them into focused commits, safely.
+- **Writes pull requests too.** `gitmit pr` describes your whole branch for reviewers, fills in your PR template, and can open the pull request for you.
 - **Noise is ignored.** Lockfiles, build output, minified files, snapshots and binaries are recognized and never sent to a model, so they don't drown out the real change or cost you tokens.
 
 ---
@@ -197,6 +199,9 @@ Or set `"provider": "ollama"` in your config. Nothing leaves your machine, so no
 ```
 gitmit [options]               Suggest messages for staged changes and commit
 gitmit split                   Split staged changes into several focused commits
+gitmit pr                      Write a pull request title and description for this branch
+gitmit pr --create [--draft]   ...then push the branch and open the pull request
+gitmit pr --update             ...then replace the open pull request's title and description
 gitmit init [--force]          Create a starter .gitmitrc.json
 gitmit config                  Show the settings gitmit will use here
 gitmit hook install [--force]  Fill in a suggestion whenever you run `git commit`
@@ -216,6 +221,8 @@ gitmit account                 Show your account and saved keys
 | `--redact` | When a secret is found, send a redacted version instead of stopping. |
 | `--push` | Push to the remote after committing. A new branch gets its upstream set, like `git push -u`. |
 | `--no-push` | Don't push, even if the config has `"push": true`. |
+| `--base <branch>` | For `pr`: the branch to compare with. Defaults to the remote's default branch. |
+| `--create`, `--draft`, `--update` | For `pr`: open the pull request (or a draft), or update the open one, with GitHub's CLI. |
 | `--force` | For `init` and `hook install`: overwrite an existing file. |
 | `-h`, `--help` | Show help. |
 | `-v`, `--version` | Show the version. |
@@ -229,6 +236,8 @@ gitmit --dry-run            # print suggestions, separated by ---
 gitmit --yes                # commit the top suggestion
 gitmit split --dry-run      # print the split plan
 gitmit split --yes          # apply the split plan
+gitmit pr                   # print the PR title, a blank line, then the description
+gitmit pr --create          # ...and open the pull request
 ```
 
 Without `--yes` or `--dry-run`, a non-interactive run prints the suggestions and commits nothing.
@@ -290,6 +299,49 @@ Splitting rewrites what's in your staging area, so it is built to be safe:
 Your normal commit hooks (pre-commit, commit-msg) run for every commit gitmit creates.
 
 **Limits:** the smallest piece gitmit can move is one hunk; lines right next to each other can't go into different commits. If a pre-commit hook reformats staged files while committing (for example lint-staged with Prettier), a split may fail partway; when it does, everything is restored.
+
+---
+
+## Pull requests
+
+On a feature branch, `gitmit pr` writes a pull request title and description from the branch's commits and its overall diff:
+
+```
+$ gitmit pr
+
+  3 commits on feat/password-reset, compared with origin/main
+
+  Pull request
+  feat(auth): add password reset via emailed link
+
+  ## Summary
+  Users who forget their password can now request a reset link by email.
+  The link expires after an hour and can only be used once.
+
+  ## Changes
+  - Add `POST /auth/reset` and `POST /auth/reset/confirm`
+  - Store hashed reset tokens with an expiry
+  - Cover the happy path and expired tokens in tests
+
+  ## How to test
+  - Request a reset for an existing account and open the emailed link
+  - Try the same link twice; the second attempt is rejected
+
+  ● What next?
+  │ ● Create the pull request on GitHub
+  │ ○ Create it as a draft
+  │ ○ Copy to clipboard
+  │ ○ Edit in your editor
+  │ ○ Write a new version
+  │ ○ Done
+```
+
+- **The base branch** is the remote's default branch (`origin/HEAD`), falling back to `main` or `master`. Pick another with `--base develop`.
+- **The title** follows the same rules as a commit header: your types, scopes, length limit, ticket ID and commitlint config. When the pull request is squash-merged, it becomes a good commit message.
+- **Your template is used.** If the repository has a pull request template (`.github/pull_request_template.md`, in the root, in `docs/`, or in `.github/PULL_REQUEST_TEMPLATE/`), gitmit fills it in instead of using its own sections.
+- **Creating the pull request** uses [GitHub's CLI](https://cli.github.com). `gitmit pr --create` pushes the branch (setting its upstream if needed) and runs `gh pr create`. If a pull request is already open for the branch, use `gitmit pr --update` to replace its title and description. Without `gh`, copy the text instead.
+- **Offline**, the title comes from the rules and the description lists the branch's commits.
+- **Secrets** are scanned for before anything is sent, exactly as for commits. Use `--redact` to send a redacted version instead of stopping.
 
 ---
 

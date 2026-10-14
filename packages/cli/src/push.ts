@@ -10,14 +10,7 @@ export class PushError extends Error {
 
 type Env = NodeJS.ProcessEnv;
 
-/**
- * Push the current branch. Uses the branch's upstream when it has one;
- * otherwise pushes to the push remote (remote.pushDefault, else "origin",
- * else the only remote) and sets it as upstream, like `git push -u`.
- *
- * With `interactive`, git talks to the terminal directly so credential
- * prompts work. Otherwise its output is captured and returned.
- */
+/** Push the current branch, setting an upstream if it has none (like `git push -u`). */
 export async function pushCurrentBranch(root: string, env: Env, interactive: boolean): Promise<string> {
   const upstream = await gitRun(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], root, env);
   let args: string[];
