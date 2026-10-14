@@ -1,7 +1,4 @@
-/**
- * The parts of VS Code's built-in Git extension API that gitmit uses.
- * Full definition: https://github.com/microsoft/vscode/blob/main/extensions/git/src/api/git.d.ts
- */
+/** The parts of VS Code's Git extension API gitmit uses (see vscode/extensions/git/src/api/git.d.ts). */
 import type { Event, Uri } from "vscode";
 
 export interface InputBox {

@@ -21,12 +21,7 @@ type FromWebview =
   | { type: "apply" }
   | { type: "cancel" };
 
-/**
- * A panel that shows a proposed split: each commit with its message and
- * changes. Changes can be moved between commits (messages are rewritten),
- * messages edited, and the commits created with the same safe applier as
- * `gitmit split`: rehearsed first, fully restored on any failure.
- */
+/** A panel to review, adjust and apply a proposed split, using the same safe applier as the CLI. */
 export class SplitPanel {
   private static current: SplitPanel | undefined;
   private plan!: Plan;

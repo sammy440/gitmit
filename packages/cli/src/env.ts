@@ -13,10 +13,7 @@ export function userEnvFile(env: NodeJS.ProcessEnv): string {
   return join(userConfigDir(env), ".env");
 }
 
-/**
- * The environment plus keys from the user's gitmit .env file. Real
- * environment variables win over the file.
- */
+/** The environment plus keys from the user's gitmit .env file; real environment variables win. */
 export function loadEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   let fromFile: Record<string, string> = {};
   try {

@@ -14,12 +14,7 @@ const OMITTED_NOTE_ROOM = "\n(excerpt truncated to fit the size limit)".length;
 /** Below this many characters an excerpt is not worth including. */
 const MIN_EXCERPT = 160;
 
-/**
- * Build a summary that fits in `maxChars`. Every file gets a header line with
- * its stats and changed symbols. The remaining budget is shared between file
- * excerpts so that small files are shown whole and large files are truncated.
- * Noise files are listed but their content is never included.
- */
+/** A summary within `maxChars`: a header line per file, and excerpts sharing the remaining budget. */
 export function summarize(files: readonly ClassifiedFile[], options: SummarizeOptions = {}): DiffSummary {
   const maxChars = options.maxChars ?? DEFAULT_MAX_CHARS;
   const summaries = files.map(toFileSummary);
@@ -85,10 +80,7 @@ function toFileSummary(file: ClassifiedFile): FileSummary {
   return summary;
 }
 
-/**
- * Water-filling allocation: each item gets at most what it needs, and budget
- * left over by small items is shared among the larger ones.
- */
+/** Water-filling: each item gets at most what it needs; leftovers go to larger items. */
 function allocate(needs: readonly number[], budget: number): number[] {
   const shares = needs.map(() => 0);
   const order = needs

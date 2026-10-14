@@ -58,10 +58,7 @@ export function scopeForPath(path: string, options: ScopeOptions = {}): string |
   return undefined;
 }
 
-/**
- * Infer one scope for the whole change. Returns no scope when files span
- * several scopes; the candidates list shows what was found.
- */
+/** Infer one scope for the whole change, or none when files span several scopes. */
 export function inferScope(files: readonly ClassifiedFile[], options: ScopeOptions = {}): ScopeInference {
   const meaningful = files.filter((f) => !isNoise(f));
   const considered = meaningful.length > 0 ? meaningful : files;

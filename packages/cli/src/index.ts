@@ -1,10 +1,4 @@
-/**
- * Public API of @gitmit/cli.
- *
- * - `defineConfig` and `Config` for gitmit.config.ts files.
- * - The building blocks the CLI is made of, for editor integrations that
- *   should behave exactly like the `gitmit` command.
- */
+/** Public API of @gitmit/cli: defineConfig plus the building blocks editor integrations reuse. */
 export { defineConfig, ConfigSchema, type Config } from "./config.js";
 export { loadSettings, type Settings, type MessageSettings } from "./settings.js";
 export { loadEnv, userConfigDir, userEnvFile } from "./env.js";

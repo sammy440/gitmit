@@ -3,11 +3,7 @@ import type { DiffFile, DiffLine, Hunk } from "./types.js";
 const DIFF_HEADER = "diff --git ";
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$/;
 
-/**
- * Parse the output of `git diff` (unified format with git extended headers).
- * Handles new, deleted, renamed, copied, mode-only and binary files, and
- * C-quoted paths. Anything before the first `diff --git` line is ignored.
- */
+/** Parse `git diff` output, including renames, copies, mode changes, binaries and quoted paths. */
 export function parseDiff(input: string): DiffFile[] {
   const lines = input.split(/\r?\n/);
   const files: DiffFile[] = [];
@@ -153,10 +149,7 @@ interface GitHeader {
   newPath: string;
 }
 
-/**
- * Parse the paths from `diff --git a/x b/y`. Ambiguous when unquoted paths
- * contain spaces, so the extended headers and ---/+++ lines override this.
- */
+/** Paths from `diff --git a/x b/y`; ambiguous with spaces, so later headers override them. */
 function parseGitHeader(rest: string): GitHeader {
   if (rest.startsWith('"')) {
     const [first, after] = readQuoted(rest);
@@ -221,10 +214,7 @@ const ESCAPES: Record<string, number> = {
   "\\": 92,
 };
 
-/**
- * Read a C-style quoted string as produced by git (core.quotePath), decoding
- * octal byte escapes as UTF-8. Returns the decoded value and the remaining input.
- */
+/** Read a git C-quoted string, decoding octal escapes as UTF-8; returns the value and the rest. */
 function readQuoted(input: string): [string, string] {
   const bytes: number[] = [];
   const encoder = new TextEncoder();

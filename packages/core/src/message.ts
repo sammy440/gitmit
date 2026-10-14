@@ -162,10 +162,7 @@ export interface ValidationResult {
   problems: string[];
 }
 
-/**
- * Normalize model drafts and keep only valid suggestions. Rule decisions with
- * high confidence override what the model returned.
- */
+/** Normalize model drafts and keep valid suggestions; high-confidence rule decisions win. */
 export function validateDraft(draft: Draft, input: GenerateInput): ValidationResult {
   const { options } = input;
   const problems: string[] = [];
@@ -223,10 +220,7 @@ export function validateDraft(draft: Draft, input: GenerateInput): ValidationRes
   return { suggestions: suggestions.slice(0, options.variants), problems };
 }
 
-/**
- * validateDraft plus the input's external validator (e.g. commitlint).
- * Suggestions that fail are dropped and their problems reported.
- */
+/** validateDraft plus the external validator (e.g. commitlint); failing suggestions are dropped. */
 export async function finalizeDraft(draft: Draft, input: GenerateInput): Promise<ValidationResult> {
   const result = validateDraft(draft, input);
   if (!input.validate) return result;
@@ -253,10 +247,7 @@ export function isSmallChange(input: Pick<GenerateInput, "summary">): boolean {
 /** Git convention: body lines at most 72 characters. */
 export const BODY_LINE_LENGTH = 72;
 
-/**
- * Wrap body text at `width`. Bullet items ("- ", "* ", "1. ") wrap with a
- * hanging indent. Words longer than the width (URLs, paths) are never split.
- */
+/** Wrap body text at `width`, with hanging indents for bullets; long words are never split. */
 export function wrapBody(body: string, width = BODY_LINE_LENGTH): string {
   return body
     .split("\n")

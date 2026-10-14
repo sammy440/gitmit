@@ -30,10 +30,7 @@ export async function repoRoot(cwd: string, env?: Env): Promise<string | undefin
   }
 }
 
-/**
- * The staged diff in the exact format the parser expects, regardless of user
- * settings such as diff.noprefix, diff.mnemonicPrefix, color.ui or diff.relative.
- */
+/** The staged diff in the format the parser expects, regardless of the user's diff settings. */
 export function stagedDiff(root: string, env?: Env, options: { binary?: boolean } = {}): Promise<string> {
   return git(
     [
@@ -94,10 +91,7 @@ export async function hooksDir(root: string, env?: Env): Promise<string> {
   return resolve(root, (await git(["rev-parse", "--git-path", "hooks"], root, env)).trim());
 }
 
-/**
- * Run `git commit` with the message. Hooks run as usual and their output goes
- * to the terminal. With `edit`, git opens the user's editor first.
- */
+/** Run `git commit` with the message; hooks run as usual, and `edit` opens the editor first. */
 export async function commit(
   root: string,
   message: string,

@@ -81,11 +81,7 @@ interface DeviceCode {
   expires_in: number;
 }
 
-/**
- * Sign in with GitHub using the device flow: show a short code, the user
- * approves it on github.com, and the GitHub token is exchanged for a gitmit
- * session. The GitHub token is used once and never stored.
- */
+/** Sign in with GitHub's device flow and exchange the GitHub token (never stored) for a gitmit session. */
 export async function login(
   env: NodeJS.ProcessEnv,
   ui: { out: (line?: string) => void; openBrowser: boolean; sleep?: (ms: number) => Promise<void> },

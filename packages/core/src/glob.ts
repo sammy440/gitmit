@@ -4,10 +4,7 @@ export interface GlobOptions {
 
 const cache = new Map<string, RegExp>();
 
-/**
- * Convert a glob to a RegExp. Supports `**`, `*`, `?` and `{a,b}`.
- * A pattern without a slash matches the basename at any depth, like .gitignore.
- */
+/** Convert a glob (`**`, `*`, `?`, `{a,b}`) to a RegExp; slashless patterns match basenames, like .gitignore. */
 export function globToRegExp(pattern: string, options: GlobOptions = {}): RegExp {
   const key = `${options.nocase ? "i" : ""}:${pattern}`;
   const cached = cache.get(key);

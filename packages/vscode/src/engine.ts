@@ -1,9 +1,4 @@
-/**
- * Everything the extension does that doesn't need the VS Code API: choosing a
- * provider, generating messages and planning splits. It uses the same
- * building blocks as the `gitmit` command, so the editor and the terminal
- * always agree. Kept free of `vscode` imports so it can be tested directly.
- */
+/** The extension's logic without the VS Code API, shared with the CLI and testable directly. */
 import { resolve } from "node:path";
 import {
   buildPatch,
@@ -54,11 +49,7 @@ export interface Prepared {
   note?: string;
 }
 
-/**
- * Load the repository's settings (gitmit config, commitlint, branch ticket)
- * and pick the provider. Keys come from VS Code's secret storage first, then
- * the same places the CLI looks (environment, ~/.config/gitmit/.env).
- */
+/** Load the repo's settings and pick the provider, with keys from secret storage first. */
 export async function prepare(
   root: string,
   keys: StoredKeys,

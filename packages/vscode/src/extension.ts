@@ -157,10 +157,7 @@ class Gitmit {
     vscode.window.showInformationMessage(`gitmit: ${choice.label} key saved.`);
   }
 
-  /**
-   * Sign in with the GitHub account VS Code already knows, and exchange it for
-   * a gitmit session. The GitHub token is used once and not kept by gitmit.
-   */
+  /** Exchange VS Code's GitHub sign-in for a gitmit session; the GitHub token isn't kept. */
   async signIn(): Promise<void> {
     const github = await vscode.authentication.getSession("github", ["read:user"], { createIfNone: true });
     const response = await vscode.window.withProgress(
@@ -232,10 +229,7 @@ class Gitmit {
     vscode.window.showInformationMessage(`gitmit: ${choice.label} key removed.`);
   }
 
-  /**
-   * Run work that sends the diff to a provider. If the secret scan stops it,
-   * show what was found and, depending on the setting, offer a redacted retry.
-   */
+  /** Run provider work, offering a redacted retry when the secret scan stops it. */
   async withSecretHandling<T>(prepared: Prepared, work: (redact: boolean) => PromiseLike<T>): Promise<T | undefined> {
     const policy = vscode.workspace.getConfiguration("gitmit").get<string>("onSecretFound", "ask");
     try {

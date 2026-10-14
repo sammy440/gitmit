@@ -709,11 +709,13 @@ Built:
 - Team configuration, commitlint integration and ticket IDs
 - Commit splitting
 - A web demo and docs site: [gitmit-frontend.vercel.app](https://gitmit-frontend.vercel.app)
-- A VS Code extension: generate messages and split commits from the Source Control panel (`packages/vscode`)
+- A VS Code extension: generate messages and split commits from the Source Control panel (`packages/vscode`), on the Marketplace and Open VSX
+- gitmit accounts: sign in with GitHub and use one saved key everywhere
+- Pull request titles and descriptions (`gitmit pr`)
 
 Next:
 
-- Publishing the VS Code extension to the Marketplace and Open VSX
+- `gitmit release`: a changelog, the next version and a tag from your commits
 - Shell completions, Windows polish, and a provider benchmark
 
 ---

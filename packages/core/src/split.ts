@@ -6,11 +6,7 @@ import type { Provider } from "./providers/types.js";
 import { isSensitiveFile, redactText, scanText, SecretsDetectedError } from "./secrets.js";
 import type { ClassifiedFile, FileCategory, FileStatus } from "./types.js";
 
-/**
- * Commit splitting works on the raw diff text, never a re-rendered version, so
- * whitespace, CRLF line endings, "\ No newline" markers and binary patch data
- * reach `git apply` exactly as git produced them.
- */
+/** Splitting uses the raw diff text so patches reach `git apply` exactly as git produced them. */
 export interface RawFile {
   /** Lines before the first hunk: diff --git, index, mode, rename, ---/+++, binary data. */
   header: string[];
@@ -145,10 +141,7 @@ export function diffUnits(diff: string, options: { ignore?: readonly string[] } 
   return { raw, files, units };
 }
 
-/**
- * A patch containing only the given units, applicable with `git apply --cached`.
- * Files keep their original order and hunks their original order within a file.
- */
+/** A patch with only the given units, in original order, for `git apply --cached`. */
 export function buildPatch(diff: DiffUnits, unitIds: Iterable<number>): string {
   const selected = new Map<number, Set<number>>();
   for (const id of unitIds) {
@@ -194,10 +187,7 @@ function bucketOf(category: FileCategory): Bucket {
   }
 }
 
-/**
- * Offline grouping: build and dependency changes, then one group per source
- * area (with that area's tests), then remaining tests, docs and CI.
- */
+/** Offline grouping: build and deps, then one group per source area with its tests, then tests, docs, CI. */
 export function heuristicPlan(diff: DiffUnits, options: ScopeOptions = {}): SplitPlan {
   const groups = new Map<string, { bucket: Bucket; area: string; units: number[] }>();
   for (const unit of diff.units) {
@@ -289,11 +279,7 @@ export interface PlanResult {
   plan: SplitPlan;
 }
 
-/**
- * Plan a split. With a model provider, the model groups units by intent; the
- * answer must use every unit exactly once or it is retried, then replaced by
- * the offline heuristics. Without one, the heuristics are used directly.
- */
+/** Plan a split with the model (retried, then falling back) or with the offline heuristics. */
 export async function planSplit(diffText: string, options: PlanOptions = {}): Promise<PlanResult> {
   const diff = diffUnits(diffText, { ignore: options.ignore });
   const fallback = heuristicPlan(diff, options);

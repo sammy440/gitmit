@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-// Try the core engine on a real repository without the CLI.
-//
-//   node scripts/try.mjs [repo]                  analyze staged changes
-//   node scripts/try.mjs [repo] --commit <rev>   analyze one commit
-//   node scripts/try.mjs [repo] --history <n>    compare guesses with the last n commit messages
-//   add --summary to print the summary text a model would receive
-//   add --generate [provider] to get commit messages (openai, anthropic, ollama, rules)
-//   add --redact to redact secrets instead of aborting
-//
-// API keys and models are read from .env in the gitmit folder (see .env.example).
+// Try the engine on a repo: node scripts/try.mjs [repo] [--commit <rev> | --history <n>] [--summary] [--generate [provider]] [--redact]
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";

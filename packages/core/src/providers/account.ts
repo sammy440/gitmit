@@ -5,15 +5,7 @@ import { DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, ProviderError, type Provider, 
 /** The hosted gitmit API. */
 export const GITMIT_API_URL = "https://gitmit-api-production.up.railway.app";
 
-/**
- * Uses the API key saved in the user's gitmit account. `apiKey` is the
- * user's gitmit session token (from `gitmit login`), not a provider key.
- *
- * Everything else still happens locally: the diff is summarized, filtered and
- * secret-scanned on this machine, and only the final prompt is sent. The
- * server adds the stored key and relays the prompt to OpenAI or Anthropic,
- * so it sees exactly what the AI provider would see.
- */
+/** Relays the locally built, secret-scanned prompt through gitmit's API using the account's saved key. */
 export function accountProvider(settings: ProviderSettings = {}): Provider {
   const baseURL = (settings.baseURL ?? GITMIT_API_URL).replace(/\/+$/, "");
   const fetchFn = settings.fetch ?? globalThis.fetch;

@@ -55,15 +55,7 @@ async function applyCached(root: string, env: Env, dir: string, patch: string, i
   if (result.code !== 0) throw new Error(`commit ${index + 1} does not apply: ${result.stderr.trim()}`);
 }
 
-/**
- * Create one commit per planned patch. Only the index and HEAD change; the
- * working tree is never touched.
- *
- * 1. Rehearse in a temporary index: the patches, applied in order on HEAD,
- *    must reproduce exactly the staged tree. Otherwise nothing is changed.
- * 2. For each patch: reset the real index to HEAD, apply it, commit (hooks run).
- * 3. On any failure, move HEAD back and restore the original staged tree.
- */
+/** Create one commit per patch, rehearsed in a temporary index first and fully restored on failure. */
 export async function applySplit(
   root: string,
   commits: readonly PlannedCommit[],

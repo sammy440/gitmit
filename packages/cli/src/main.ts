@@ -485,11 +485,7 @@ function shouldPush(flags: Flags, settings: Settings): boolean {
   return flags.push ?? settings.config.push ?? false;
 }
 
-/**
- * With --push and nothing staged, push the commits that are waiting instead
- * of stopping. Returns undefined when there is something to commit, or
- * nothing to push (the usual "no staged changes" message follows).
- */
+/** With --push and nothing staged, push waiting commits instead; undefined when there's nothing to do. */
 async function pushIfNothingStaged(root: string, io: Io, err: (line: string) => void): Promise<number | undefined> {
   if ((await stagedDiff(root, io.env)).trim()) return undefined;
   const waiting = await unpushedCount(root, io.env);

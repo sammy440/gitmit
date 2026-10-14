@@ -13,8 +13,7 @@ const options = {
   format: "cjs",
   platform: "node",
   target: "node20",
-  // typescript (3.5 MB) is only loaded by commitlint for commitlint.config.ts files; leaving it out
-  // keeps the extension small. JSON, YAML and JavaScript commitlint configs work as usual.
+  // typescript is only needed for commitlint.config.ts files; leaving it out keeps the bundle small.
   external: ["vscode", "typescript"],
   sourcemap: true,
   minify: !watch,
@@ -24,13 +23,11 @@ const options = {
   banner: { js: 'const __gitmitImportMetaUrl = require("url").pathToFileURL(__filename).href;' },
 };
 
-// gitmit.config.ts files `import { defineConfig } from "@gitmit/cli"`; the config loader
-// resolves that import to dist/index.js next to the bundle.
+// Config files import @gitmit/cli, which the loader resolves to dist/index.js.
 mkdirSync("dist", { recursive: true });
 writeFileSync("dist/index.js", "exports.defineConfig = (config) => config;\n");
 
-// jiti (which loads gitmit.config.ts) requires its transpiler at runtime as "../dist/babel.cjs",
-// relative to the bundle. It only uses Node built-ins, so ship it next to the bundle.
+// jiti loads its transpiler from ../dist/babel.cjs at runtime, so ship it next to the bundle.
 const require = createRequire(import.meta.url);
 const jitiDir = dirname(require.resolve("jiti/package.json", { paths: [dirname(require.resolve("@gitmit/cli/package.json"))] }));
 copyFileSync(join(jitiDir, "dist", "babel.cjs"), "dist/babel.cjs");

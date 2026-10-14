@@ -10,10 +10,7 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-/**
- * The hook fills in a message only for a plain `git commit` (no -m, -F,
- * template, merge, squash or amend), and never blocks the commit.
- */
+/** Fills in a message only for a plain `git commit`, and never blocks the commit. */
 export function hookScript(nodePath: string, cliPath: string): string {
   return `#!/bin/sh
 ${MARKER} (gitmit hook install). Remove with: gitmit hook uninstall

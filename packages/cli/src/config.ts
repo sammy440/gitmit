@@ -87,10 +87,7 @@ export interface ResolvedConfig {
   layers: ConfigLayer[];
 }
 
-/**
- * Resolve config: user config, then project config (or `explicit`), then
- * `overrides` from flags. Later layers win; `ticket` is merged field by field.
- */
+/** Resolve config layers: user, then project (or `explicit`), then flag overrides; later layers win. */
 export async function resolveConfig(
   root: string,
   env: NodeJS.ProcessEnv,
@@ -170,8 +167,7 @@ async function readConfigFile(path: string, required: boolean): Promise<Config |
   let data: unknown;
   try {
     const { createJiti } = await import("jiti");
-    // Resolve `import { defineConfig } from "@gitmit/cli"` to this copy of gitmit, so config
-    // files work even when the repository doesn't install @gitmit/cli itself.
+    // Resolve `@gitmit/cli` imports in config files to this copy, even if the repo doesn't install it.
     const self = fileURLToPath(new URL(import.meta.url.endsWith(".ts") ? "./index.ts" : "./index.js", import.meta.url));
     const jiti = createJiti(import.meta.url, { moduleCache: false, fsCache: false, alias: { "@gitmit/cli": self } });
     data = await jiti.import(path, { default: true });

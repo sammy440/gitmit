@@ -34,10 +34,7 @@ export class EmptyDiffError extends Error {
   }
 }
 
-/**
- * The full pipeline: analyze the diff, scan for secrets before any remote
- * call, then ask the provider for validated suggestions.
- */
+/** The full pipeline: analyze, scan for secrets before any remote call, then ask the provider. */
 export async function generate(diff: string, options: GenerateOptions): Promise<GenerateResult> {
   const analysis = analyze(diff, options);
   if (analysis.files.length === 0) throw new EmptyDiffError();

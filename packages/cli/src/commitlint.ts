@@ -41,11 +41,7 @@ export async function findCommitlintConfig(root: string): Promise<string | undef
 
 type Rule = readonly [number, string?, unknown?] | undefined;
 
-/**
- * Load the repository's commitlint config with commitlint itself, so presets
- * (extends), plugins and parser options behave exactly as in the team's
- * commit-msg hook. Returns undefined when the repo has no commitlint config.
- */
+/** Load the repo's commitlint config with commitlint itself; undefined when there is none. */
 export async function loadCommitlint(root: string): Promise<CommitlintSettings | undefined> {
   const source = await findCommitlintConfig(root);
   if (!source) return undefined;

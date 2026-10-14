@@ -6,10 +6,7 @@ export const MAX_ATTEMPTS = 3;
 
 const DRAFT_OUTPUT = { schema: DraftSchema, name: "commit_suggestions" };
 
-/**
- * Wrap a model call with the shared prompt, validation and bounded
- * regeneration loop. Invalid output is sent back to the model as feedback.
- */
+/** Wrap a model call with the shared prompt, validation and bounded regeneration. */
 export function modelProvider(name: string, remote: boolean, complete: CompleteFn): Provider {
   // Validate every answer against its schema, whatever the adapter already checked.
   const checked: CompleteFn = async (prompt, output, signal) => {

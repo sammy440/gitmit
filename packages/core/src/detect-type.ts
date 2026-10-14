@@ -8,11 +8,7 @@ const SMALL_CHANGE = 30;
 const FIX_WORDS =
   /\b(?:fix(?:es|ed)?|bug|regression|crash|broken|incorrect|wrong|typo|null|undefined|NaN|nil|None|edge case|off[- ]by[- ]one|race|leak|guard|sanitize|escape)\b/i;
 
-/**
- * Decide the commit type from file categories and change shape. Rules give a
- * "high" confidence answer when the diff is unambiguous (only tests, only docs, ...).
- * Otherwise the result is a "low" confidence hint the model may override.
- */
+/** Decide the commit type: "high" confidence when the diff is unambiguous, otherwise a hint the model may override. */
 export function detectType(files: readonly ClassifiedFile[]): TypeDetection {
   if (files.length === 0) return low("chore", "empty diff");
 
