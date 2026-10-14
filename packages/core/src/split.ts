@@ -246,7 +246,8 @@ function describeBucket(bucket: Bucket, area: string): string {
   }
 }
 
-const PlanSchema = z.strictObject({
+/** The shape a model must return when planning a split. */
+export const PlanSchema = z.strictObject({
   commits: z.array(
     z.strictObject({
       units: z.array(z.number().int()),

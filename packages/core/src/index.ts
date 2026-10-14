@@ -17,6 +17,7 @@ export {
   buildPatch,
   heuristicPlan,
   planSplit,
+  PlanSchema,
   type RawFile,
   type SplitUnit,
   type SplitGroup,
@@ -25,3 +26,16 @@ export {
   type PlanOptions,
   type PlanResult,
 } from "./split.js";
+
+import { DraftSchema as _DraftSchema } from "./message.js";
+import { PlanSchema as _PlanSchema } from "./split.js";
+
+/**
+ * The only structured outputs gitmit ever asks a model for, by name. A server
+ * relaying prompts for the account provider accepts these and nothing else.
+ */
+export const OUTPUT_SCHEMAS = {
+  commit_suggestions: _DraftSchema,
+  commit_plan: _PlanSchema,
+} as const;
+export type OutputName = keyof typeof OUTPUT_SCHEMAS;
