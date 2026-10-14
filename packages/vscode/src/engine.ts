@@ -26,15 +26,21 @@ export interface ExtensionSettings {
   configPath: string;
 }
 
-/** API keys kept in VS Code's secret storage. */
+/** API keys kept in VS Code's secret storage, and the gitmit account session if signed in. */
 export interface StoredKeys {
   openai?: string;
   anthropic?: string;
+  /** A gitmit session: uses the key saved in the user's gitmit account. */
+  session?: { token: string; apiUrl: string };
 }
 
 export class MissingKeyError extends Error {
-  constructor(readonly provider: "openai" | "anthropic") {
-    super(`No ${provider === "openai" ? "OpenAI" : "Anthropic"} API key is set.`);
+  constructor(readonly provider: "openai" | "anthropic" | "account") {
+    super(
+      provider === "account"
+        ? "You're not signed in to gitmit."
+        : `No ${provider === "openai" ? "OpenAI" : "Anthropic"} API key is set.`,
+    );
     this.name = "MissingKeyError";
   }
 }
@@ -70,17 +76,22 @@ export async function prepare(
   const fileEnv = loadEnv(env);
   const openaiKey = keys.openai || fileEnv.OPENAI_API_KEY;
   const anthropicKey = keys.anthropic || fileEnv.ANTHROPIC_API_KEY;
+  // A local key wins; then the gitmit account; then offline rules.
   const providerName: ProviderName =
-    settings.config.provider ?? (openaiKey ? "openai" : anthropicKey ? "anthropic" : "rules");
+    settings.config.provider ?? (openaiKey ? "openai" : anthropicKey ? "anthropic" : keys.session ? "account" : "rules");
 
-  const apiKey = providerName === "openai" ? openaiKey : providerName === "anthropic" ? anthropicKey : undefined;
-  if ((providerName === "openai" || providerName === "anthropic") && !apiKey) throw new MissingKeyError(providerName);
+  const apiKey =
+    providerName === "openai" ? openaiKey : providerName === "anthropic" ? anthropicKey : providerName === "account" ? keys.session?.token : undefined;
+  if ((providerName === "openai" || providerName === "anthropic" || providerName === "account") && !apiKey) {
+    throw new MissingKeyError(providerName);
+  }
 
   const model =
     settings.config.model ||
     (providerName === "openai" ? fileEnv.OPENAI_MODEL : providerName === "anthropic" ? fileEnv.ANTHROPIC_MODEL : providerName === "ollama" ? fileEnv.OLLAMA_MODEL : undefined) ||
     undefined;
-  const baseURL = providerName === "ollama" ? options.ollamaHost || fileEnv.OLLAMA_HOST || undefined : undefined;
+  const baseURL =
+    providerName === "ollama" ? options.ollamaHost || fileEnv.OLLAMA_HOST || undefined : providerName === "account" ? keys.session?.apiUrl : undefined;
 
   const prepared: Prepared = {
     settings,
@@ -89,7 +100,8 @@ export async function prepare(
   };
   if (model) prepared.model = model;
   if (providerName === "rules" && options.provider === "auto" && !settings.config.provider) {
-    prepared.note = "No API key set, so this message comes from offline rules. Run \"gitmit: Set API Key\" for AI-written messages.";
+    prepared.note =
+      "No API key set, so this message comes from offline rules. Run \"gitmit: Sign In with GitHub\" to use the key saved in your gitmit account, or \"gitmit: Set API Key\".";
   }
   return prepared;
 }

@@ -65,6 +65,20 @@ describe("prepare: choosing the provider", () => {
     expect(providerLabel(prepared)).toBe("openai (gpt-test)");
   });
 
+  it("uses the gitmit account when signed in and there's no local key", async () => {
+    const session = { token: "gmt_" + "x".repeat(43), apiUrl: "https://api.example" };
+    const prepared = await prepare(dir, { session }, AUTO, env());
+    expect(prepared.providerName).toBe("account");
+    expect(prepared.provider.remote).toBe(true);
+    expect(prepared.note).toBeUndefined();
+    const local = await prepare(dir, { session, openai: "sk-local" }, AUTO, env());
+    expect(local.providerName).toBe("openai");
+  });
+
+  it("explains how to sign in when the account is chosen without a session", async () => {
+    await expect(prepare(dir, {}, { ...AUTO, provider: "account" }, env())).rejects.toMatchObject({ provider: "account" });
+  });
+
   it("explains a missing key when a provider is chosen explicitly", async () => {
     await expect(prepare(dir, {}, { ...AUTO, provider: "openai" }, env())).rejects.toBeInstanceOf(MissingKeyError);
   });

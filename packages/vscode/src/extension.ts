@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { dirname } from "node:path";
-import { SecretsDetectedError, type SecretFinding } from "@gitmit/core";
+import { hostname } from "node:os";
+import { GITMIT_API_URL, SecretsDetectedError, type SecretFinding } from "@gitmit/core";
 import { ConfigError, GitError, nothingStagedMessage, stagedDiff, UsageError } from "@gitmit/cli";
 import * as vscode from "vscode";
 import {
@@ -17,6 +18,12 @@ import type { API, GitExtension, Repository } from "./git-api";
 import { SplitPanel } from "./split-panel";
 
 const KEY_SECRETS = { openai: "gitmit.openaiApiKey", anthropic: "gitmit.anthropicApiKey" } as const;
+const SESSION_SECRET = "gitmit.session";
+const ACCOUNT_PAGE = "https://gitmit-frontend.vercel.app/account";
+
+function apiUrl(): string {
+  return (process.env.GITMIT_API_URL || GITMIT_API_URL).replace(/\/+$/, "");
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const log = vscode.window.createOutputChannel("gitmit", { log: true });
@@ -27,6 +34,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("gitmit.split", (arg?: unknown) => gitmit.run(() => gitmit.split(arg))),
     vscode.commands.registerCommand("gitmit.setApiKey", () => gitmit.run(() => gitmit.setApiKey())),
     vscode.commands.registerCommand("gitmit.clearApiKey", () => gitmit.run(() => gitmit.clearApiKey())),
+    vscode.commands.registerCommand("gitmit.signIn", () => gitmit.run(() => gitmit.signIn())),
+    vscode.commands.registerCommand("gitmit.signOut", () => gitmit.run(() => gitmit.signOut())),
+    vscode.commands.registerCommand("gitmit.manageAccount", () => vscode.env.openExternal(vscode.Uri.parse(ACCOUNT_PAGE))),
     vscode.commands.registerCommand("gitmit.openSettings", () =>
       vscode.commands.executeCommand("workbench.action.openSettings", "@ext:gitmit.gitmit"),
     ),
@@ -147,6 +157,65 @@ class Gitmit {
     vscode.window.showInformationMessage(`gitmit: ${choice.label} key saved.`);
   }
 
+  /**
+   * Sign in with the GitHub account VS Code already knows, and exchange it for
+   * a gitmit session. The GitHub token is used once and not kept by gitmit.
+   */
+  async signIn(): Promise<void> {
+    const github = await vscode.authentication.getSession("github", ["read:user"], { createIfNone: true });
+    const response = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: "gitmit: signing in" },
+      () =>
+        fetch(`${apiUrl()}/api/auth/github`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ accessToken: github.accessToken, client: "vscode", label: `VS Code on ${hostname()}` }),
+        }).catch(() => undefined),
+    );
+    if (!response) throw new UsageError(`Could not reach ${apiUrl()}. Check your connection.`);
+    const body = (await response.json().catch(() => null)) as { token?: string; user?: { login: string }; error?: { message?: string } } | null;
+    if (!response.ok || !body?.token) throw new UsageError(body?.error?.message ?? `Sign-in failed (HTTP ${response.status}).`);
+
+    await this.context.secrets.store(SESSION_SECRET, JSON.stringify({ token: body.token, apiUrl: apiUrl(), login: body.user?.login }));
+    const me = await fetch(`${apiUrl()}/api/me`, { headers: { authorization: `Bearer ${body.token}` } })
+      .then((r) => (r.ok ? (r.json() as Promise<{ keys: { provider: string }[] }>) : undefined))
+      .catch(() => undefined);
+    if (me && me.keys.length === 0) {
+      const choice = await vscode.window.showInformationMessage(
+        `gitmit: signed in as ${body.user?.login}. Your account has no API key saved yet.`,
+        "Add a Key",
+      );
+      if (choice) await vscode.env.openExternal(vscode.Uri.parse(ACCOUNT_PAGE));
+    } else {
+      vscode.window.showInformationMessage(
+        `gitmit: signed in as ${body.user?.login}. gitmit will use the ${me?.keys.map((k) => k.provider).join(" and ") ?? "API"} key saved in your account.`,
+      );
+    }
+  }
+
+  async signOut(): Promise<void> {
+    const session = await this.session();
+    if (!session) {
+      vscode.window.showInformationMessage("gitmit: not signed in.");
+      return;
+    }
+    // Revoke on the server too, so the session can't be used again.
+    await fetch(`${session.apiUrl}/api/auth/logout`, { method: "POST", headers: { authorization: `Bearer ${session.token}` } }).catch(() => {});
+    await this.context.secrets.delete(SESSION_SECRET);
+    vscode.window.showInformationMessage(`gitmit: signed out${session.login ? ` ${session.login}` : ""}.`);
+  }
+
+  private async session(): Promise<{ token: string; apiUrl: string; login?: string } | undefined> {
+    const raw = await this.context.secrets.get(SESSION_SECRET);
+    if (!raw) return undefined;
+    try {
+      const data = JSON.parse(raw) as { token?: string; apiUrl?: string; login?: string };
+      return data.token ? { token: data.token, apiUrl: data.apiUrl || apiUrl(), login: data.login } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async clearApiKey(): Promise<void> {
     const keys = await this.keys();
     const items = [
@@ -251,11 +320,12 @@ class Gitmit {
   }
 
   private async keys(): Promise<StoredKeys> {
-    const [openai, anthropic] = await Promise.all([
+    const [openai, anthropic, session] = await Promise.all([
       this.context.secrets.get(KEY_SECRETS.openai),
       this.context.secrets.get(KEY_SECRETS.anthropic),
+      this.session(),
     ]);
-    return { openai, anthropic };
+    return { openai, anthropic, ...(session ? { session: { token: session.token, apiUrl: session.apiUrl } } : {}) };
   }
 
   private settings(): ExtensionSettings {
@@ -274,10 +344,14 @@ class Gitmit {
     if (process.env.GITMIT_E2E_REPO) console.error("[gitmit]", error);
     if (error instanceof MissingKeyError) {
       const choice = await vscode.window.showErrorMessage(
-        `gitmit: ${error.message} Add one, or switch to offline rules.`,
-        "Set API Key",
+        error.provider === "account"
+          ? `gitmit: ${error.message} Sign in to use the key saved in your account, or switch to offline rules.`
+          : `gitmit: ${error.message} Add one, sign in to use your gitmit account, or switch to offline rules.`,
+        "Sign In with GitHub",
+        ...(error.provider === "account" ? [] : ["Set API Key"]),
         "Use Offline Rules",
       );
+      if (choice === "Sign In with GitHub") await this.signIn();
       if (choice === "Set API Key") await this.setApiKey();
       if (choice === "Use Offline Rules") {
         await vscode.workspace.getConfiguration("gitmit").update("provider", "rules", vscode.ConfigurationTarget.Global);
@@ -286,6 +360,16 @@ class Gitmit {
     }
     if (error instanceof UsageError || error instanceof ConfigError || error instanceof GitError) {
       vscode.window.showErrorMessage(`gitmit: ${error.message}`);
+      return;
+    }
+    if (error instanceof Error && error.name === "ProviderError" && (error as { status?: number }).status === 401 && /^account:/.test(error.message)) {
+      const choice = await vscode.window.showErrorMessage("gitmit: your sign-in has expired or was revoked.", "Sign In Again");
+      if (choice) await this.signIn();
+      return;
+    }
+    if (error instanceof Error && error.name === "ProviderError" && /^account: No .*key is saved/.test(error.message)) {
+      const choice = await vscode.window.showErrorMessage(`gitmit: ${error.message.replace(/^account: /, "")}`, "Add a Key");
+      if (choice) await vscode.env.openExternal(vscode.Uri.parse(ACCOUNT_PAGE));
       return;
     }
     if (error instanceof Error && error.name === "ProviderError") {

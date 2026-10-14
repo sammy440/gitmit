@@ -2,7 +2,7 @@
   "name": "gitmit",
   "displayName": "gitmit: Commit Messages",
   "description": "Convention-compliant commit messages from your staged changes. Follows your commitlint rules, keeps secrets on your machine, and splits messy changes into focused commits.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "gitmit",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -51,6 +51,21 @@
         "icon": "$(list-tree)"
       },
       {
+        "command": "gitmit.signIn",
+        "title": "Sign In with GitHub",
+        "category": "gitmit"
+      },
+      {
+        "command": "gitmit.signOut",
+        "title": "Sign Out",
+        "category": "gitmit"
+      },
+      {
+        "command": "gitmit.manageAccount",
+        "title": "Manage Account",
+        "category": "gitmit"
+      },
+      {
         "command": "gitmit.setApiKey",
         "title": "Set API Key",
         "category": "gitmit"
@@ -97,13 +112,15 @@
           "type": "string",
           "enum": [
             "auto",
+            "account",
             "openai",
             "anthropic",
             "ollama",
             "rules"
           ],
           "enumDescriptions": [
-            "Use the project's gitmit config if it sets a provider, otherwise the first provider with an API key, otherwise offline rules.",
+            "Use the project's gitmit config if it sets a provider, otherwise a local API key, otherwise your gitmit account if signed in, otherwise offline rules.",
+            "The API key saved in your gitmit account. Run \"gitmit: Sign In with GitHub\".",
             "OpenAI. Set your key with \"gitmit: Set API Key\".",
             "Anthropic. Set your key with \"gitmit: Set API Key\".",
             "Local models through Ollama. Nothing leaves your machine.",

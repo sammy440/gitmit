@@ -41,13 +41,18 @@ Before anything is sent to a remote AI, gitmit scans the staged changes for API 
 ## Getting started
 
 1. Install the extension.
-2. Optional: run **gitmit: Set API Key** and paste an OpenAI or Anthropic key. Without a key, gitmit writes messages offline from rules alone.
+2. Optional: give gitmit an AI key, either way works:
+   - **Sign in with GitHub** (**gitmit: Sign In with GitHub**) to use the key saved in your [gitmit account](https://gitmit-frontend.vercel.app/account). Save it once there and it works here, in the CLI and on the website.
+   - Or run **gitmit: Set API Key** and paste an OpenAI or Anthropic key.
+
+   Without either, gitmit writes messages offline from rules alone.
 3. Stage some changes and click ✨ in the Source Control panel.
 
 ## AI providers
 
 | Provider | Setup |
 |---|---|
+| **Your gitmit account** | Run **gitmit: Sign In with GitHub**. Uses the key saved at [gitmit-frontend.vercel.app/account](https://gitmit-frontend.vercel.app/account). Your changes are scanned and summarized locally; only the summary goes through gitmit's server. |
 | **OpenAI** | Run **gitmit: Set API Key** and choose OpenAI. |
 | **Anthropic** | Run **gitmit: Set API Key** and choose Anthropic. |
 | **Ollama** (local models) | Set `gitmit.provider` to `ollama`. Nothing leaves your machine. |
@@ -63,13 +68,16 @@ Keys are stored in VS Code's encrypted secret storage, never in settings files. 
 | **gitmit: Split into Focused Commits** | Propose a split, review it, and create the commits. |
 | **gitmit: Set API Key** | Save an OpenAI or Anthropic key in secret storage. |
 | **gitmit: Remove API Key** | Delete a saved key. |
+| **gitmit: Sign In with GitHub** | Use the key saved in your gitmit account. |
+| **gitmit: Sign Out** | Sign out of your gitmit account in VS Code. |
+| **gitmit: Manage Account** | Open your account page: keys, devices, deletion. |
 | **gitmit: Open Settings** | Open gitmit's settings. |
 
 ## Settings
 
 | Setting | Default | Description |
 |---|---|---|
-| `gitmit.provider` | `auto` | `auto`, `openai`, `anthropic`, `ollama` or `rules`. `auto` uses the project config if it names a provider, otherwise the first provider with a key, otherwise offline rules. |
+| `gitmit.provider` | `auto` | `auto`, `account`, `openai`, `anthropic`, `ollama` or `rules`. `auto` uses the project config if it names a provider, otherwise a local key, otherwise your gitmit account if signed in, otherwise offline rules. |
 | `gitmit.model` | (provider default) | For example `gpt-5-mini` or `claude-opus-5-5`. |
 | `gitmit.ollamaHost` | `http://localhost:11434` | Ollama server URL. |
 | `gitmit.showSuggestions` | `true` | Pick from several suggestions. When off, the top suggestion goes straight into the commit box. |
