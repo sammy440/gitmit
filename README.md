@@ -114,10 +114,11 @@ Without an API key, gitmit uses offline rules and tells you so. For better messa
 
 ## Choosing an AI provider
 
-gitmit supports four providers:
+gitmit supports five providers:
 
 | Provider | Needs | Data leaves your machine | Default model |
 |---|---|---|---|
+| `account` | `gitmit login`, with a key saved in your [gitmit account](#your-gitmit-account) | Yes, after the secret scan, through gitmit's server | Your saved model, or the provider's default |
 | `openai` | `OPENAI_API_KEY` | Yes, after the secret scan | `gpt-5-mini` |
 | `anthropic` | `ANTHROPIC_API_KEY` | Yes, after the secret scan | `claude-opus-5-5` |
 | `ollama` | [Ollama](https://ollama.com) running locally | No (unless `OLLAMA_HOST` points to another machine) | `llama3.2` |
@@ -150,12 +151,33 @@ OLLAMA_MODEL=           # optional, default llama3.2
 
 Environment variables with the same names work too, and take priority over the file.
 
+### Your gitmit account
+
+Instead of putting a key on every computer, you can save it once in your gitmit account and use it everywhere: on the website, in the CLI and in VS Code.
+
+1. Go to [gitmit-frontend.vercel.app/account](https://gitmit-frontend.vercel.app/account), sign in with GitHub, and save your OpenAI or Anthropic key.
+2. In your terminal, run `gitmit login`. It shows a short code; approve it on github.com.
+3. In VS Code, run **gitmit: Sign In with GitHub**.
+
+That's it: gitmit now uses your saved key wherever you're signed in. `gitmit account` shows what's saved, and `gitmit logout` signs this computer out.
+
+**How your key is protected:**
+
+- **Write-only.** Once saved, the key can't be read back by anyone, including you. The website only shows its last four characters.
+- **Encrypted.** Keys are encrypted with AES-256-GCM. The encryption key is kept only in the server's environment, never in the database.
+- **Your code stays on your machine.** The CLI and VS Code read, filter and secret-scan your changes locally, and send only the final summary, the same text the AI provider would receive. gitmit's server adds your key and passes it on.
+- **Nothing is logged.** Not prompts, not diffs, not keys.
+- **You're in control.** Sign out any device, remove a key, or delete your account and everything in it, from the account page.
+
+Accounts are optional. Everything else in this section works without one.
+
 ### Which provider is used
 
 1. `--provider` on the command line, if given.
 2. `provider` in your gitmit config, if set.
-3. Otherwise, the first provider with a key: OpenAI, then Anthropic.
-4. Otherwise, the offline `rules` provider.
+3. Otherwise, the first provider with a local key: OpenAI, then Anthropic.
+4. Otherwise, your gitmit account, if you're signed in.
+5. Otherwise, the offline `rules` provider.
 
 Run `gitmit config` at any time to see which provider and model will be used.
 
@@ -179,13 +201,16 @@ gitmit init [--force]          Create a starter .gitmitrc.json
 gitmit config                  Show the settings gitmit will use here
 gitmit hook install [--force]  Fill in a suggestion whenever you run `git commit`
 gitmit hook uninstall          Remove the hook
+gitmit login                   Sign in with GitHub to use the key saved in your gitmit account
+gitmit logout                  Sign out on this computer
+gitmit account                 Show your account and saved keys
 ```
 
 | Option | What it does |
 |---|---|
 | `--dry-run` | Show suggestions (or the split plan) without committing. |
 | `-y`, `--yes` | Commit the top suggestion (or apply the split) without asking. |
-| `--provider <name>` | `openai`, `anthropic`, `ollama` or `rules`. |
+| `--provider <name>` | `account`, `openai`, `anthropic`, `ollama` or `rules`. |
 | `--model <name>` | Model for the provider, e.g. `--model gpt-5`. |
 | `--config <path>` | Use this config file instead of searching the repository. |
 | `--redact` | When a secret is found, send a redacted version instead of stopping. |
@@ -434,6 +459,8 @@ Working on `feat/PROJ-123-login`? gitmit can add `PROJ-123` to every message:
 - A summary of your staged changes: file names, change counts, names of added or removed functions and classes, and the changed lines, up to about 12,000 characters. Large diffs are trimmed to fit.
 - Your settings: allowed types, the scope, the length limit and so on.
 
+**Where it goes:** straight to the AI provider when you use your own key. When you use your [gitmit account](#your-gitmit-account), it goes through gitmit's server, which adds your saved key and passes it on without logging it.
+
 **What is never sent:**
 
 - **Unstaged changes, and files you didn't stage.**
@@ -563,6 +590,10 @@ const { plan, diff: units } = await planSplit(diff, { provider: createProvider("
 **"My commits aren't on GitHub."** gitmit commits locally, like `git commit`. Run `git push`, or use `gitmit --push` (or `"push": true` in your config).
 
 **"git push failed. Your commits were kept."** Usually the remote has commits you don't have yet. Run `git pull --rebase`, then `git push`.
+
+**"Your gitmit sign-in has expired or was revoked."** Run `gitmit login` again. Sessions are signed out when you remove them on the account page.
+
+**"No API key is saved in your gitmit account."** Add one at [gitmit-frontend.vercel.app/account](https://gitmit-frontend.vercel.app/account).
 
 **Not sure what settings apply?** Run `gitmit config`.
 

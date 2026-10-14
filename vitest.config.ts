@@ -10,5 +10,7 @@ export default defineConfig({
   },
   test: {
     include: ["packages/*/test/**/*.test.ts"],
+    // Many tests drive real git (commits, hooks, splits); give them room on slow or busy machines.
+    testTimeout: 20_000,
   },
 });

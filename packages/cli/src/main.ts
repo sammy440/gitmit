@@ -17,6 +17,7 @@ import { loadSettings, type Settings } from "./settings.js";
 import { splitCommand } from "./split-command.js";
 import { SplitError } from "./split.js";
 import { PushError, pushCurrentBranch } from "./push.js";
+import { account, login, logout, readAuth } from "./auth.js";
 import { loadEnv, userEnvFile } from "./env.js";
 import { commit, GitError, nothingStagedMessage, repoRoot, stagedDiff, unpushedCount } from "./git.js";
 import { installHook, uninstallHook, writeHookMessage } from "./hook.js";
@@ -34,6 +35,9 @@ Usage:
   gitmit config                  Show the settings gitmit will use here
   gitmit hook install [--force]  Fill in a suggestion whenever you run \`git commit\`
   gitmit hook uninstall          Remove the hook
+  gitmit login                   Sign in with GitHub to use the API key saved in your gitmit account
+  gitmit logout                  Sign out on this computer
+  gitmit account                 Show your gitmit account and saved keys
 
 Options:
   --dry-run              Show suggestions (or the split plan) without committing
@@ -140,6 +144,11 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
   };
 
   try {
+    // Account commands work anywhere, not just inside a repository.
+    if (positionals[0] === "login") return await loginCommand(io, out);
+    if (positionals[0] === "logout") return await logoutCommand(io, out);
+    if (positionals[0] === "account") return await accountCommand(io, out);
+
     const root = await repoRoot(io.cwd, io.env);
     if (!root) throw new UsageError("Not inside a git repository.");
 
@@ -202,7 +211,8 @@ async function loadAll(root: string, flags: Flags, io: Io, requireTicket = true)
     overrides: { provider: flags.provider, model: flags.model },
     requireTicket,
   });
-  const provider = resolveProvider(env, settings.config.provider, settings.config.model);
+  const auth = await readAuth(io.env);
+  const provider = resolveProvider(env, settings.config.provider, settings.config.model, auth);
   return { settings, provider };
 }
 
@@ -454,5 +464,39 @@ async function pushIfNothingStaged(root: string, io: Io, err: (line: string) => 
   err(`Nothing staged to commit. Pushing ${what}...`);
   const output = await pushCurrentBranch(root, io.env, Boolean(io.stdout.isTTY) && io.stdinIsTTY);
   if (output) err(output);
+  return 0;
+}
+
+async function loginCommand(io: Io, out: (line?: string) => void): Promise<number> {
+  const existing = await readAuth(io.env);
+  if (existing) out(`Already signed in as ${existing.login}. Signing in again replaces this session.`);
+  const auth = await login(io.env, { out, openBrowser: Boolean(io.stdout.isTTY) && io.stdinIsTTY });
+  out(`Signed in as ${auth.login}.`);
+  const { keys } = await account(io.env, auth);
+  if (keys.length) {
+    out(`gitmit will use the ${keys.map((k) => k.provider).join(" and ")} key saved in your account.`);
+  } else {
+    out("No API key is saved in your account yet. Add one at https://gitmit-frontend.vercel.app/account");
+  }
+  return 0;
+}
+
+async function logoutCommand(io: Io, out: (line?: string) => void): Promise<number> {
+  const auth = await logout(io.env);
+  out(auth ? `Signed out ${auth.login} on this computer.` : "Not signed in.");
+  return 0;
+}
+
+async function accountCommand(io: Io, out: (line?: string) => void): Promise<number> {
+  const auth = await readAuth(io.env);
+  if (!auth) {
+    out("Not signed in. Run `gitmit login` to use the API key saved in your gitmit account.");
+    return 1;
+  }
+  const { user, keys, sessions } = await account(io.env, auth);
+  out(`Signed in as ${user.login}${user.name ? ` (${user.name})` : ""}`);
+  out(keys.length ? "Saved keys:" : "Saved keys: none. Add one at https://gitmit-frontend.vercel.app/account");
+  for (const key of keys) out(`  ${key.provider.padEnd(10)} ${key.last4}${key.model ? `  model ${key.model}` : ""}`);
+  out(`Signed-in devices: ${sessions.length} (manage them at https://gitmit-frontend.vercel.app/account)`);
   return 0;
 }

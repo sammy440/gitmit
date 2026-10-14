@@ -24,6 +24,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 Keys can also come from environment variables. Local models work through Ollama with `--provider ollama`.
 
+**Or use your gitmit account:** save your key once at [gitmit-frontend.vercel.app/account](https://gitmit-frontend.vercel.app/account), then run `gitmit login` here. The same key works in VS Code and on the website. Your changes are still scanned and summarized on your machine; only the summary is relayed.
+
 Before anything is sent to a remote provider, gitmit scans the changes for API keys, tokens, private keys and files like `.env`. If it finds one, it stops and sends nothing unless you choose to send a redacted version.
 
 ## Usage
@@ -37,6 +39,9 @@ gitmit --model <name>      Model for the provider
 gitmit --redact            Redact secrets instead of stopping
 gitmit --push              Push after committing (gitmit commits locally, like git commit)
 gitmit split               Split staged changes into several focused commits
+gitmit login               Sign in with GitHub to use the key saved in your gitmit account
+gitmit logout              Sign out on this computer
+gitmit account             Show your account and saved keys
 gitmit init                Create a starter .gitmitrc.json
 gitmit config              Show the settings in effect
 gitmit hook install        Fill in a suggestion whenever you run `git commit`

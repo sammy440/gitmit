@@ -13,7 +13,8 @@
         "anthropic",
         "openai",
         "ollama",
-        "rules"
+        "rules",
+        "account"
       ]
     },
     "model": {
