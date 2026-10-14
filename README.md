@@ -38,6 +38,7 @@ $ gitmit
 - [Commands](#commands)
 - [Splitting messy changes](#splitting-messy-changes)
 - [Pull requests](#pull-requests)
+- [Releases](#releases)
 - [The git hook](#the-git-hook)
 - [Team configuration](#team-configuration)
 - [commitlint](#commitlint)
@@ -61,6 +62,7 @@ Most AI commit tools send your whole diff to a model and paste back whatever com
 - **Secrets never leave your machine.** Before anything is sent to a remote AI, gitmit scans for API keys, tokens, private keys and files like `.env`. If it finds one, nothing is sent.
 - **Works offline.** No API key? gitmit still writes messages, using rules alone. Prefer local models? Use [Ollama](https://ollama.com).
 - **Splits messy changes.** Staged three unrelated things at once? `gitmit split` turns them into focused commits, safely.
+- **Cuts releases.** `gitmit release` turns your Conventional Commits into a changelog, suggests the next version, and tags it.
 - **Writes pull requests too.** `gitmit pr` describes your whole branch for reviewers, fills in your PR template, and can open the pull request for you.
 - **Noise is ignored.** Lockfiles, build output, minified files, snapshots and binaries are recognized and never sent to a model, so they don't drown out the real change or cost you tokens.
 
@@ -202,6 +204,7 @@ gitmit split                   Split staged changes into several focused commits
 gitmit pr                      Write a pull request title and description for this branch
 gitmit pr --create [--draft]   ...then push the branch and open the pull request
 gitmit pr --update             ...then replace the open pull request's title and description
+gitmit release                 Changelog, next version and tag from the commits since the last release
 gitmit init [--force]          Create a starter .gitmitrc.json
 gitmit config                  Show the settings gitmit will use here
 gitmit hook install [--force]  Fill in a suggestion whenever you run `git commit`
@@ -222,6 +225,8 @@ gitmit account                 Show your account and saved keys
 | `--push` | Push to the remote after committing. A new branch gets its upstream set, like `git push -u`. |
 | `--no-push` | Don't push, even if the config has `"push": true`. |
 | `--base <branch>` | For `pr`: the branch to compare with. Defaults to the remote's default branch. |
+| `--bump <level>` | For `release`: `major`, `minor`, `patch` or an exact version like `1.0.0`, instead of the suggestion. |
+| `--github` | For `release`: push, then create a GitHub release with GitHub's CLI. |
 | `--create`, `--draft`, `--update` | For `pr`: open the pull request (or a draft), or update the open one, with GitHub's CLI. |
 | `--force` | For `init` and `hook install`: overwrite an existing file. |
 | `-h`, `--help` | Show help. |
@@ -238,6 +243,8 @@ gitmit split --dry-run      # print the split plan
 gitmit split --yes          # apply the split plan
 gitmit pr                   # print the PR title, a blank line, then the description
 gitmit pr --create          # ...and open the pull request
+gitmit release --dry-run    # print the next version and its notes
+gitmit release --yes --github   # release, push and create a GitHub release
 ```
 
 Without `--yes` or `--dry-run`, a non-interactive run prints the suggestions and commits nothing.
@@ -342,6 +349,57 @@ $ gitmit pr
 - **Creating the pull request** uses [GitHub's CLI](https://cli.github.com). `gitmit pr --create` pushes the branch (setting its upstream if needed) and runs `gh pr create`. If a pull request is already open for the branch, use `gitmit pr --update` to replace its title and description. Without `gh`, copy the text instead.
 - **Offline**, the title comes from the rules and the description lists the branch's commits.
 - **Secrets** are scanned for before anything is sent, exactly as for commits. Use `--redact` to send a redacted version instead of stopping.
+
+---
+
+## Releases
+
+`gitmit release` reads the commits since your last version tag and prepares the next release:
+
+```
+$ gitmit release
+
+  4 commits since v1.3.0. Next version: 1.4.0 (minor: 2 features, 1 fix).
+
+  v1.4.0
+  ## [1.4.0](https://github.com/acme/app/compare/v1.3.0...v1.4.0) (2026-10-14)
+
+  Password resets arrive, along with faster search on large projects.
+
+  ### Features
+
+  - **auth:** add password reset via emailed link (a1b2c3d)
+  - **search:** index files in the background (d4e5f6a)
+
+  ### Bug fixes
+
+  - **search:** keep the cursor position after refreshing (b7c8d9e)
+
+  ● What next?
+  │ ● Release v1.4.0 (update CHANGELOG.md, commit and tag)
+  │ ○ Change the version
+  │ ○ Edit the notes in your editor
+  │ ○ Copy the notes
+  │ ○ Cancel
+```
+
+- **The version** follows [semantic versioning](https://semver.org) from your commit types: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps the major version, a `feat` the minor version, and `fix`, `perf` or a revert the patch version. Before 1.0.0, breaking changes bump the minor version instead. Override it with `--bump major|minor|patch` or an exact version, e.g. `--bump 1.0.0`.
+- **The changelog** groups changes into Breaking changes, Features, Bug fixes, Performance, Reverts and Other changes (commits that don't follow Conventional Commits). Docs, tests, chores, refactors, CI and style changes are left out. With a GitHub remote, versions link to the compare view and entries to their commits.
+- **Highlights.** With an AI provider, a short summary of the release goes at the top. The commit messages are secret-scanned first; if anything is found, the highlights are skipped (or redacted with `--redact`). Offline, the notes are the changelog alone.
+- **Releasing** adds the section to the top of `CHANGELOG.md` (creating it if needed), updates the `version` in your root `package.json` if it has one, commits `chore(release): v1.4.0` and creates an annotated tag. Then push it, push and create a GitHub release (needs [GitHub's CLI](https://cli.github.com)), or keep it local.
+- **The first release** uses the version in `package.json` as is, or 0.1.0. Tags keep the style you already use (`v1.2.3` or `1.2.3`).
+- **Safety.** gitmit won't release when you have staged changes, uncommitted edits to `CHANGELOG.md` or `package.json`, or when the tag already exists. If a commit hook rejects the release commit, the files are put back as they were.
+
+In scripts and CI:
+
+```bash
+gitmit release --dry-run           # the next version (on stderr) and the notes (on stdout)
+gitmit release --yes               # update the changelog, commit and tag
+gitmit release --yes --push        # ...and push the commit and tag
+gitmit release --yes --github      # ...and create a GitHub release
+```
+
+If nothing since the last tag is a feature, fix or breaking change, gitmit says there's nothing to release. Use `--bump patch` to release anyway.
 
 ---
 
@@ -712,10 +770,11 @@ Built:
 - A VS Code extension: generate messages and split commits from the Source Control panel (`packages/vscode`), on the Marketplace and Open VSX
 - gitmit accounts: sign in with GitHub and use one saved key everywhere
 - Pull request titles and descriptions (`gitmit pr`)
+- Releases: changelog, next version, tag and GitHub release (`gitmit release`)
 
 Next:
 
-- `gitmit release`: a changelog, the next version and a tag from your commits
+- Pull requests and releases from the VS Code extension
 - Shell completions, Windows polish, and a provider benchmark
 
 ---

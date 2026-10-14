@@ -42,6 +42,7 @@ gitmit split               Split staged changes into several focused commits
 gitmit pr                  Write a pull request title and description for this branch
 gitmit pr --create         ...and push the branch and open it (--draft for a draft)
 gitmit pr --update         ...and update the open pull request
+gitmit release             Changelog, next version and tag from the commits since the last release
 gitmit login               Sign in with GitHub to use the key saved in your gitmit account
 gitmit logout              Sign out on this computer
 gitmit account             Show your account and saved keys
@@ -62,6 +63,10 @@ It only touches the staging area, never your files. The plan is rehearsed in a t
 `gitmit pr` describes your whole branch for reviewers: a Conventional Commits title (it becomes the commit when the pull request is squash-merged) and a description with a summary, the changes and how to test them. If the repository has a pull request template, gitmit fills it in. The base branch is the remote's default branch; use `--base <branch>` to pick another.
 
 With [GitHub's CLI](https://cli.github.com) installed, `--create` pushes the branch and opens the pull request, and `--update` replaces the title and description of the one already open.
+
+## Releases
+
+`gitmit release` reads the Conventional Commits since your last version tag, suggests the next version (breaking changes bump major, features minor, fixes patch), and writes the changelog section, with a short AI-written summary on top when you use an AI provider. Releasing updates `CHANGELOG.md` and `package.json`, commits and tags; then you can push it and create a GitHub release. Use `--bump` to pick the version, `--dry-run` to preview, and `--yes --github` in CI.
 
 ## Team settings
 

@@ -67,6 +67,19 @@ export async function unpushedCount(root: string, env?: Env): Promise<number | u
   return result.code === 0 ? Number(result.stdout.trim()) : undefined;
 }
 
+/** Commits in `range` (oldest first, merges skipped), as subject and body. */
+export async function logCommits(root: string, range: string, env?: Env): Promise<{ sha: string; subject: string; body: string }[]> {
+  const log = await git(["log", "--reverse", "--no-merges", "--format=%H%x1f%s%x1f%b%x1e", range], root, env);
+  return log
+    .split("\x1e")
+    .map((record) => record.trim())
+    .filter(Boolean)
+    .map((record) => {
+      const [sha = "", subject = "", body = ""] = record.split("\x1f");
+      return { sha, subject: subject.trim(), body: body.trim() };
+    });
+}
+
 export interface RunResult {
   code: number;
   stdout: string;

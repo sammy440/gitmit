@@ -16,6 +16,7 @@ import { ConfigError } from "./config.js";
 import { loadSettings, type Settings } from "./settings.js";
 import { splitCommand } from "./split-command.js";
 import { prCommand } from "./pr-command.js";
+import { releaseCommand } from "./release-command.js";
 import { SplitError } from "./split.js";
 import { PushError, pushCurrentBranch } from "./push.js";
 import { account, login, logout, readAuth } from "./auth.js";
@@ -35,6 +36,8 @@ Usage:
   gitmit pr                      Write a pull request title and description for this branch
   gitmit pr --create [--draft]   ...and open the pull request on GitHub (needs the gh CLI)
   gitmit pr --update             ...and replace the open pull request's title and description
+  gitmit release                 Changelog, next version and tag from the commits since the last release
+  gitmit release --yes [--push | --github]   ...without asking; then push, or push and create a GitHub release
   gitmit init [--force]          Create a starter .gitmitrc.json
   gitmit config                  Show the settings gitmit will use here
   gitmit hook install [--force]  Fill in a suggestion whenever you run \`git commit\`
@@ -53,6 +56,8 @@ Options:
   --push                 Push after committing (sets the upstream on a new branch)
   --no-push              Don't push, even if the config says to
   --base <branch>        For pr: the branch to compare with (default: the remote's default branch)
+  --bump <level>         For release: major, minor, patch or an exact version, instead of the suggestion
+  --github               For release: push, then create a GitHub release (needs the gh CLI)
   -h, --help             Show this help
   -v, --version          Show the version
 
@@ -96,6 +101,8 @@ interface Flags {
   create: boolean;
   draft: boolean;
   update: boolean;
+  bump?: string;
+  github: boolean;
 }
 
 /** Run the CLI. Returns the process exit code. */
@@ -121,6 +128,8 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         create: { type: "boolean", default: false },
         draft: { type: "boolean", default: false },
         update: { type: "boolean", default: false },
+        bump: { type: "string" },
+        github: { type: "boolean", default: false },
         "no-push": { type: "boolean" },
         help: { type: "boolean", short: "h", default: false },
         version: { type: "boolean", short: "v", default: false },
@@ -158,6 +167,8 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     create: values.create || values.draft,
     draft: values.draft,
     update: values.update,
+    bump: values.bump,
+    github: values.github,
   };
 
   try {
@@ -185,6 +196,24 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         update: flags.update,
         redact: flags.redact,
         interactive: Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.dryRun,
+        out,
+        err,
+      });
+    }
+    if (command === "release") {
+      const { settings, provider } = await loadAll(root, flags, io, false);
+      return await releaseCommand({
+        root,
+        env: io.env,
+        settings,
+        provider,
+        bump: flags.bump,
+        dryRun: flags.dryRun,
+        yes: flags.yes,
+        push: shouldPush(flags, settings),
+        github: flags.github,
+        redact: flags.redact,
+        interactive: Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.yes && !flags.dryRun,
         out,
         err,
       });
