@@ -11,6 +11,7 @@ export * from "./message.js";
 export * from "./providers/index.js";
 export { generate, EmptyDiffError, type GenerateOptions, type GenerateResult } from "./generate.js";
 export { analyze, type AnalyzeOptions, type Analysis } from "./analyze.js";
+export { generatePr, NoCommitsError, PrDraftSchema, type PrCommit, type PrDraft, type PrOptions, type PrResult } from "./pr.js";
 export {
   parseRawDiff,
   diffUnits,
@@ -29,13 +30,12 @@ export {
 
 import { DraftSchema as _DraftSchema } from "./message.js";
 import { PlanSchema as _PlanSchema } from "./split.js";
+import { PrDraftSchema as _PrDraftSchema } from "./pr.js";
 
-/**
- * The only structured outputs gitmit ever asks a model for, by name. A server
- * relaying prompts for the account provider accepts these and nothing else.
- */
+/** The only structured outputs gitmit asks a model for; the account relay accepts nothing else. */
 export const OUTPUT_SCHEMAS = {
   commit_suggestions: _DraftSchema,
   commit_plan: _PlanSchema,
+  pr_description: _PrDraftSchema,
 } as const;
 export type OutputName = keyof typeof OUTPUT_SCHEMAS;
