@@ -2,14 +2,15 @@ import { git } from "./git.js";
 import { DEFAULT_TICKET_PATTERN } from "./config.js";
 import { UsageError } from "./provider.js";
 
-/** The current branch name, or undefined when HEAD is detached. */
+/** The current branch name; in a GitHub Actions pull request checkout (detached), the PR's branch. */
 export async function currentBranch(root: string, env?: NodeJS.ProcessEnv): Promise<string | undefined> {
+  let name = "";
   try {
-    const name = (await git(["symbolic-ref", "--short", "-q", "HEAD"], root, env)).trim();
-    return name || undefined;
+    name = (await git(["symbolic-ref", "--short", "-q", "HEAD"], root, env)).trim();
   } catch {
-    return undefined;
+    // Detached HEAD.
   }
+  return name || env?.GITHUB_HEAD_REF || undefined;
 }
 
 /** Extract a ticket ID from a branch name with a regex; group 1 is the ID if present. */

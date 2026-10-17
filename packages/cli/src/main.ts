@@ -17,6 +17,7 @@ import { loadSettings, type Settings } from "./settings.js";
 import { splitCommand } from "./split-command.js";
 import { prCommand } from "./pr-command.js";
 import { releaseCommand } from "./release-command.js";
+import { checkCommand } from "./check-command.js";
 import { SplitError } from "./split.js";
 import { PushError, pushCurrentBranch } from "./push.js";
 import { account, login, logout, readAuth } from "./auth.js";
@@ -36,6 +37,8 @@ Usage:
   gitmit pr                      Write a pull request title and description for this branch
   gitmit pr --create [--draft]   ...and open the pull request on GitHub (needs the gh CLI)
   gitmit pr --update             ...and replace the open pull request's title and description
+  gitmit check                   Check this branch's commit messages against your rules
+  gitmit check --title "<text>"  ...and a pull request title (--no-commits for the title alone)
   gitmit release                 Changelog, next version and tag from the commits since the last release
   gitmit release --yes [--push | --github]   ...without asking; then push, or push and create a GitHub release
   gitmit init [--force]          Create a starter .gitmitrc.json
@@ -56,6 +59,9 @@ Options:
   --push                 Push after committing (sets the upstream on a new branch)
   --no-push              Don't push, even if the config says to
   --base <branch>        For pr: the branch to compare with (default: the remote's default branch)
+  --range <a..b>         For check: the commits to check (default: the branch, compared with --base)
+  --suggest              For check: suggest a fixed message for each problem
+  --json                 For check: print the results as JSON
   --bump <level>         For release: major, minor, patch or an exact version, instead of the suggestion
   --github               For release: push, then create a GitHub release (needs the gh CLI)
   -h, --help             Show this help
@@ -103,6 +109,11 @@ interface Flags {
   update: boolean;
   bump?: string;
   github: boolean;
+  range?: string;
+  title?: string;
+  commits: boolean;
+  suggest: boolean;
+  json: boolean;
 }
 
 /** Run the CLI. Returns the process exit code. */
@@ -130,6 +141,11 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         update: { type: "boolean", default: false },
         bump: { type: "string" },
         github: { type: "boolean", default: false },
+        range: { type: "string" },
+        title: { type: "string" },
+        "no-commits": { type: "boolean", default: false },
+        suggest: { type: "boolean", default: false },
+        json: { type: "boolean", default: false },
         "no-push": { type: "boolean" },
         help: { type: "boolean", short: "h", default: false },
         version: { type: "boolean", short: "v", default: false },
@@ -169,6 +185,11 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
     update: values.update,
     bump: values.bump,
     github: values.github,
+    range: values.range,
+    title: values.title,
+    commits: !values["no-commits"],
+    suggest: values.suggest,
+    json: values.json,
   };
 
   try {
@@ -196,6 +217,24 @@ export async function main(argv: readonly string[], io: Io = defaultIo()): Promi
         update: flags.update,
         redact: flags.redact,
         interactive: Boolean(io.stdout.isTTY) && io.stdinIsTTY && !flags.dryRun,
+        out,
+        err,
+      });
+    }
+    if (command === "check") {
+      const { settings, provider } = await loadAll(root, flags, io, false);
+      return await checkCommand({
+        root,
+        env: io.env,
+        settings,
+        provider,
+        range: flags.range,
+        base: flags.base,
+        title: flags.title,
+        commits: flags.commits,
+        suggest: flags.suggest,
+        redact: flags.redact,
+        json: flags.json,
         out,
         err,
       });

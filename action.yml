@@ -1,0 +1,53 @@
+name: gitmit check
+description: Check a pull request's commit messages and title against your team's commit rules.
+author: gitmit
+branding:
+  icon: git-commit
+  color: green
+
+inputs:
+  commits:
+    description: Check each commit on the pull request.
+    default: "true"
+  title:
+    description: Check the pull request title (it becomes the commit message on a squash merge).
+    default: "true"
+  suggest:
+    description: Suggest a fixed message for each problem. Uses an AI provider if you pass a key in env, otherwise offline rules.
+    default: "true"
+  provider:
+    description: openai, anthropic, ollama or rules. Default is picked from the keys in env.
+    default: ""
+  version:
+    description: The @gitmit/cli version to run.
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: gitmit check
+      shell: bash
+      # Everything from the event goes through env, never straight into the script.
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        CHECK_COMMITS: ${{ inputs.commits }}
+        CHECK_TITLE: ${{ inputs.title }}
+        SUGGEST: ${{ inputs.suggest }}
+        PROVIDER: ${{ inputs.provider }}
+        GITMIT_VERSION: ${{ inputs.version }}
+      run: |
+        args=(check)
+        if [ -n "$BASE_SHA" ] && [ -n "$HEAD_SHA" ]; then
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            echo "::error title=gitmit check::This is a shallow clone, so the pull request's commits can't be read. Check out with actions/checkout and fetch-depth: 0."
+            exit 1
+          fi
+          args+=(--range "$BASE_SHA..$HEAD_SHA")
+        fi
+        if [ "$CHECK_TITLE" = "true" ] && [ -n "$PR_TITLE" ]; then args+=(--title "$PR_TITLE"); fi
+        if [ "$CHECK_COMMITS" != "true" ]; then args+=(--no-commits); fi
+        if [ "$SUGGEST" = "true" ]; then args+=(--suggest); fi
+        if [ -n "$PROVIDER" ]; then args+=(--provider "$PROVIDER"); fi
+        npx --yes "@gitmit/cli@$GITMIT_VERSION" "${args[@]}"

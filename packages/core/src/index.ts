@@ -12,6 +12,7 @@ export * from "./providers/index.js";
 export { generate, EmptyDiffError, type GenerateOptions, type GenerateResult } from "./generate.js";
 export { analyze, type AnalyzeOptions, type Analysis } from "./analyze.js";
 export { generatePr, NoCommitsError, PrDraftSchema, type PrCommit, type PrDraft, type PrOptions, type PrResult } from "./pr.js";
+export { checkMessage, isGenerated, type CheckRules } from "./check.js";
 export {
   bumpVersion,
   compareVersions,

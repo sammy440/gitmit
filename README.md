@@ -38,6 +38,7 @@ $ gitmit
 - [Commands](#commands)
 - [Splitting messy changes](#splitting-messy-changes)
 - [Pull requests](#pull-requests)
+- [Checking messages in CI](#checking-messages-in-ci)
 - [Releases](#releases)
 - [The git hook](#the-git-hook)
 - [Team configuration](#team-configuration)
@@ -62,6 +63,7 @@ Most AI commit tools send your whole diff to a model and paste back whatever com
 - **Secrets never leave your machine.** Before anything is sent to a remote AI, gitmit scans for API keys, tokens, private keys and files like `.env`. If it finds one, nothing is sent.
 - **Works offline.** No API key? gitmit still writes messages, using rules alone. Prefer local models? Use [Ollama](https://ollama.com).
 - **Splits messy changes.** Staged three unrelated things at once? `gitmit split` turns them into focused commits, safely.
+- **Enforces the rules in CI.** `gitmit check` and the GitHub Action flag commit messages and pull request titles that break your rules, with a fixed version for each.
 - **Cuts releases.** `gitmit release` turns your Conventional Commits into a changelog, suggests the next version, and tags it.
 - **Writes pull requests too.** `gitmit pr` describes your whole branch for reviewers, fills in your PR template, and can open the pull request for you.
 - **Noise is ignored.** Lockfiles, build output, minified files, snapshots and binaries are recognized and never sent to a model, so they don't drown out the real change or cost you tokens.
@@ -204,6 +206,7 @@ gitmit split                   Split staged changes into several focused commits
 gitmit pr                      Write a pull request title and description for this branch
 gitmit pr --create [--draft]   ...then push the branch and open the pull request
 gitmit pr --update             ...then replace the open pull request's title and description
+gitmit check                   Check this branch's commit messages (and a PR title) against your rules
 gitmit release                 Changelog, next version and tag from the commits since the last release
 gitmit init [--force]          Create a starter .gitmitrc.json
 gitmit config                  Show the settings gitmit will use here
@@ -225,6 +228,10 @@ gitmit account                 Show your account and saved keys
 | `--push` | Push to the remote after committing. A new branch gets its upstream set, like `git push -u`. |
 | `--no-push` | Don't push, even if the config has `"push": true`. |
 | `--base <branch>` | For `pr`: the branch to compare with. Defaults to the remote's default branch. |
+| `--range <a..b>` | For `check`: the commits to check, instead of the branch compared with `--base`. |
+| `--title <text>` | For `check`: also check a pull request title. Add `--no-commits` to check only the title. |
+| `--suggest` | For `check`: suggest a fixed message for each problem. |
+| `--json` | For `check`: print the results as JSON. |
 | `--bump <level>` | For `release`: `major`, `minor`, `patch` or an exact version like `1.0.0`, instead of the suggestion. |
 | `--github` | For `release`: push, then create a GitHub release with GitHub's CLI. |
 | `--create`, `--draft`, `--update` | For `pr`: open the pull request (or a draft), or update the open one, with GitHub's CLI. |
@@ -243,6 +250,7 @@ gitmit split --dry-run      # print the split plan
 gitmit split --yes          # apply the split plan
 gitmit pr                   # print the PR title, a blank line, then the description
 gitmit pr --create          # ...and open the pull request
+gitmit check                # exit code 1 if a commit message breaks the rules
 gitmit release --dry-run    # print the next version and its notes
 gitmit release --yes --github   # release, push and create a GitHub release
 ```
@@ -349,6 +357,54 @@ $ gitmit pr
 - **Creating the pull request** uses [GitHub's CLI](https://cli.github.com). `gitmit pr --create` pushes the branch (setting its upstream if needed) and runs `gh pr create`. If a pull request is already open for the branch, use `gitmit pr --update` to replace its title and description. Without `gh`, copy the text instead.
 - **Offline**, the title comes from the rules and the description lists the branch's commits.
 - **Secrets** are scanned for before anything is sent, exactly as for commits. Use `--redact` to send a redacted version instead of stopping.
+
+---
+
+## Checking messages in CI
+
+`gitmit check` checks the commit messages on your branch, and optionally a pull request title, against the same rules gitmit writes with:
+
+```
+$ gitmit check --suggest
+Checking 3 commits since origin/main.
+✗ 4f1c2ab  Fixed the login bug.
+    - not in "type(scope): description" form, e.g. "fix(auth): handle expired tokens"
+    Suggested: fix(auth): reject empty passwords on login
+✗ 1 of 3 messages needs changes.
+```
+
+- **The rules** are your gitmit config (types, scopes, header length, required tickets). If the repository has a commitlint config, its rules are used instead, exactly as your commit-msg hook would apply them.
+- **Merge commits** and git's own `Revert "..."` messages are skipped. `fixup!` and `squash!` commits are flagged, so they get squashed before merging.
+- **The exit code** is 1 when anything needs changes, so it can fail a CI job.
+- **Options:** `--range <a..b>` checks specific commits, `--title "<text>"` checks a pull request title (`--no-commits` checks the title alone), `--suggest` proposes a fixed message for each problem from that commit's diff, and `--json` prints machine-readable results.
+
+### The GitHub Action
+
+Add `.github/workflows/gitmit.yml`:
+
+```yaml
+name: Commit messages
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: sammy440/gitmit@v0.8.0
+```
+
+Each problem shows up as an annotation on the run and in the job summary, with a suggested fix. Notes:
+
+- **`fetch-depth: 0` is needed** so the pull request's commits can be read.
+- **Squash merging?** The pull request title becomes the commit, so check only the title: `with: { commits: false }`.
+- **Better suggestions:** suggestions use offline rules unless you pass a key, e.g. `env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }`. Turn them off with `suggest: false`.
+- **commitlint presets** (`extends: ["@commitlint/config-conventional"]`) must be installed, so run your package manager's install step before the check.
+- **Inputs:** `commits`, `title`, `suggest` (all `true` by default), `provider`, and `version` (the gitmit version, default `latest`).
 
 ---
 
@@ -771,6 +827,7 @@ Built:
 - gitmit accounts: sign in with GitHub and use one saved key everywhere
 - Pull request titles and descriptions (`gitmit pr`)
 - Releases: changelog, next version, tag and GitHub release (`gitmit release`)
+- Checking messages and PR titles in CI (`gitmit check` and the GitHub Action)
 
 Next:
 
